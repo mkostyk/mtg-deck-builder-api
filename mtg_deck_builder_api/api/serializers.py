@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Card
+from .models import Card, Deck, CardsInDeck
 
 class CardSerializer(serializers.HyperlinkedModelSerializer):
     scryfall_id = serializers.CharField(max_length = 40)
@@ -31,3 +31,21 @@ class CardSerializer(serializers.HyperlinkedModelSerializer):
                   'toughness', 'type_line', 'card_text', 'color_identity',
                   'legalities', 'rulings_uri', 'rarity', 'flavor_text',
                   'artist', 'edhrec_rank', 'prices')
+
+class DeckSerializer(serializers.HyperlinkedModelSerializer):
+    name = serializers.CharField(max_length = 1000)
+    user_id = serializers.IntegerField()
+    private = serializers.BooleanField()
+
+    class Meta:
+        model = Deck
+        fields = ('id', 'name', 'user_id', 'private')
+
+
+class CardsInDeckSerializer(serializers.HyperlinkedModelSerializer):
+    deck_id = serializers.IntegerField()
+    card_id = serializers.IntegerField()
+
+    class Meta:
+        model = CardsInDeck
+        fields = ('id', 'deck_id', 'card_id')

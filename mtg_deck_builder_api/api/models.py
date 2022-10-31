@@ -21,3 +21,14 @@ class Card(models.Model):
     artist = models.CharField(max_length = 100, null=True, blank=True)
     edhrec_rank = models.IntegerField(null=True, blank=True)
     prices = models.JSONField(null=True, blank=True)
+
+class Deck(models.Model):
+    name = models.CharField(max_length = 1000)
+    user_id = models.PositiveIntegerField()
+    private = models.BooleanField()
+
+#Users are built in
+
+class CardsInDeck(models.Model):
+    deck_id = models.PositiveIntegerField()
+    card_id = models.PositiveIntegerField()
