@@ -52,7 +52,7 @@ class DeckView(APIView):
         if id is not None:
             queryset = Deck.objects.filter(id=id)
         if name is not None:
-            queryset = Deck.objects.filter(name=name)
+            queryset = Deck.objects.filter(name__icontains=name)
         if user_id is not None:
             queryset = Deck.objects.filter(user_id=user_id)          
         
