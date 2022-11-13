@@ -32,6 +32,9 @@ class CardSerializer(serializers.HyperlinkedModelSerializer):
                   'legalities', 'rulings_uri', 'rarity', 'flavor_text',
                   'artist', 'edhrec_rank', 'prices')
 
+class ListOfCardsSerializer(serializers.ListField):
+    child = CardSerializer()
+
 class DeckSerializer(serializers.HyperlinkedModelSerializer):
     name = serializers.CharField(max_length = 1000)
     user_id = serializers.IntegerField()
@@ -40,7 +43,6 @@ class DeckSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Deck
         fields = ('id', 'name', 'user_id', 'private')
-
 
 class CardsInDeckSerializer(serializers.HyperlinkedModelSerializer):
     deck_id = serializers.IntegerField()
