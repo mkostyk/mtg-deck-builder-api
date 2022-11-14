@@ -6,12 +6,40 @@ from rest_framework.parsers import JSONParser
 from rest_framework import status
 from django.http import JsonResponse
 from django.shortcuts import get_list_or_404 # TODO - use this
+from knox.auth import TokenAuthentication
+from knox.views import LoginView as KnoxLoginView
+from knox.models import AuthToken
 
 from .serializers import *
 from .models import *
-
 # TODO - error codes
 # TODO - JsonResponse
+
+
+class RegisterView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = CreateUserSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response({
+            "user": UserSerializer(user, context=serializer).data,
+            "token": AuthToken.objects.create(user)[1]
+        })
+
+
+# TODO
+class LoginView(KnoxLoginView):
+    authentication_classes = [BasicAuthentication]
+
+class ExampleView(APIView):
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, format=None):
+        content = {
+            'foo': 'bar'
+        }
+        return Response(content)
 
 # TODO - error handling
 class CardView(APIView):
