@@ -31,15 +31,6 @@ class RegisterView(APIView):
 class LoginView(KnoxLoginView):
     authentication_classes = [BasicAuthentication]
 
-class ExampleView(APIView):
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
-
-    def get(self, request, format=None):
-        content = {
-            'foo': 'bar'
-        }
-        return Response(content)
 
 # TODO - error handling
 class CardView(APIView):
@@ -66,9 +57,8 @@ class CardView(APIView):
 
     
 class DeckView(APIView):
-    authentication_classes = [BasicAuthentication]
+    authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticatedOrReadOnly] # TODO - tylko dany użytkownik
-
 
     def get(self, request):
         queryset = CardsInDeck.objects.none()
@@ -97,7 +87,8 @@ class DeckView(APIView):
         deck_serializer = DeckSerializer(data=deck_data)
 
         if deck_serializer.is_valid():
-            deck_serializer.save()
+            deck_serializer.save(author=request.user)
+        
             return JsonResponse(deck_serializer.data, status=status.HTTP_201_CREATED) 
         return JsonResponse(deck_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

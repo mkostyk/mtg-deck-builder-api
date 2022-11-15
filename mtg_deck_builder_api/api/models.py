@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Card(models.Model):
     scryfall_id = models.CharField(max_length = 40, null=True, blank=True)
@@ -26,6 +27,10 @@ class Deck(models.Model):
     name = models.CharField(max_length = 1000)
     user_id = models.PositiveIntegerField()
     private = models.BooleanField()
+
+    # If user is deleted models.CASCADE ensures that every reference
+    # to it in Deck table will be deleted as well.
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
 
 #Users are built in
 
