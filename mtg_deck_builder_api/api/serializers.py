@@ -38,12 +38,11 @@ class CardSerializer(serializers.HyperlinkedModelSerializer):
 
 class DeckSerializer(serializers.HyperlinkedModelSerializer):
     name = serializers.CharField(max_length = 1000)
-    user_id = serializers.IntegerField()
     private = serializers.BooleanField()
 
     class Meta:
         model = Deck
-        fields = ('id', 'name', 'user_id', 'private')
+        fields = ('id', 'name', 'private')
 
 
 class CardsInDeckSerializer(serializers.HyperlinkedModelSerializer):

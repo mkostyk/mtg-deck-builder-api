@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+# TODO - card faces, prices & legalities
+
 class Card(models.Model):
     scryfall_id = models.CharField(max_length = 40, null=True, blank=True)
     card_name = models.TextField(null=True, blank=True)
@@ -25,7 +27,6 @@ class Card(models.Model):
 
 class Deck(models.Model):
     name = models.CharField(max_length = 1000)
-    user_id = models.PositiveIntegerField() # TODO - wywalić
     private = models.BooleanField()
 
     # If user is deleted models.CASCADE ensures that every reference
@@ -35,5 +36,5 @@ class Deck(models.Model):
 #Users are built in
 
 class CardsInDeck(models.Model):
-    deck_id = models.PositiveIntegerField()
+    deck_id = models.PositiveIntegerField() # TODO - many-to-one relashionship - use foreign key
     card_id = models.PositiveIntegerField()

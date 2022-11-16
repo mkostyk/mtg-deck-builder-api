@@ -9,11 +9,13 @@ from django.shortcuts import get_list_or_404 # TODO - use this
 from knox.auth import TokenAuthentication
 from knox.views import LoginView as KnoxLoginView
 from knox.models import AuthToken
+from django.db.models import Q
 
 from .serializers import *
 from .models import *
 # TODO - error codes
 # TODO - JsonResponse
+# TODO - single objects instead of querysets
 
 
 class RegisterView(APIView):
@@ -29,7 +31,7 @@ class RegisterView(APIView):
 
 # TODO
 class LoginView(KnoxLoginView):
-    authentication_classes = [BasicAuthentication]
+    authentication_classes = [BasicAuthentication] #TODO
 
 
 # TODO - error handling
@@ -73,12 +75,17 @@ class DeckView(APIView):
         if name is not None:
             queryset = Deck.objects.filter(name__icontains=name)
         if user_id is not None:
-            queryset = Deck.objects.filter(user_id=user_id)
+            try:
+                user = User.objects.get(id=user_id)
+                queryset = Deck.objects.filter(author=user)
+            except User.DoesNotExist:
+                return Response({"message" : "Bad request: user ID is incorrect"},
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
         # Filtering private decks
         if not request.user.is_anonymous:
-            queryset = queryset.filter(private=False) | queryset.filter(author=request.user) # To jest SQLowy OR
+            queryset = queryset.filter(Q(private=False) | Q(author=request.user))
         else:
             queryset = queryset.filter(private=False)
         
@@ -100,7 +107,16 @@ class DeckView(APIView):
 
     def delete(self, request):
         deck_id = request.query_params.get('id')
-        Deck.objects.all().filter(id=deck_id).delete()
+        
+        # Checking if we are deck's author
+        try:
+            deck = Deck.objects.get(id=deck_id, author=request.user)
+        except Deck.DoesNotExist:
+            return Response({"message" : "Bad request: chosen deck does not exist or you are not its author"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        deck.delete()
+
         # TODO - error handling
         return JsonResponse({'message': 'Deck was deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)
     
@@ -111,19 +127,22 @@ class CardsInDeckView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get(self, request):
-        queryset = CardsInDeck.objects.none()
+        queryset = CardsInDeck.objects.all()
 
         deck_id = request.query_params.get('deck_id')
         
         # TODO - Django shortcut, error handling
-        if deck_id is not None:
-            #Checking if chosen deck is public
-            deck = Deck.objects.filter(id=deck_id).filter(private=False)
-            if deck.exists():
-                queryset = CardsInDeck.objects.filter(deck_id=deck_id)
-
-        if not queryset.exists():
-            return Response({}, status=status.HTTP_200_OK)
+        if deck_id is not None: 
+            #Checking if chosen deck is public.
+            try:
+                deck = Deck.objects.get(Q(id = deck_id) & (Q(private = False) | Q(author = request.user)))
+                queryset = queryset.filter(deck_id = deck_id)
+            except Deck.DoesNotExist:
+                return Response({"message" : "Bad request: chosen deck does not exist or is not public"},
+                                status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"message" : "Bad request: you have to specify deck id"},
+                            status=status.HTTP_400_BAD_REQUEST)
       
         serializer = CardsInDeckSerializer(queryset, many=True)
         return Response(serializer.data)
@@ -133,14 +152,31 @@ class CardsInDeckView(APIView):
         card_data = JSONParser().parse(request)
         card_serializer = CardsInDeckSerializer(data=card_data)
 
-        if card_serializer.is_valid():
+        # Checking if we are trying to add to our own deck.
+        try:
+            deck = Deck.objects.get(id=card_data.deck_id, author=request.user)
+        except Deck.DoesNotExist:
+            return Response({"message" : "Bad request: chosen deck does not exist or you are not its author"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if card_serializer.is_valid() and deck.exists():
             card_serializer.save()
             return JsonResponse(card_serializer.data, status=status.HTTP_201_CREATED) 
+
         return JsonResponse(card_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     
     def delete(self, request):
         card_id = request.query_params.get('card_id')
-        CardsInDeck.objects.all().filter(id=card_id).delete()
+        
+        try:
+            deck_id = CardsInDeck.object.get(id=card_id).deck_id
+            deck = Deck.objects.get(id=deck_id, author=request.user)
+        except Deck.DoesNotExist:
+            return Response({"message" : "Bad request: chosen card does not exist or you are not its owner"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        CardsInDeck.object.get(id=card_id).delete()
+
         # TODO - error handling
-        return JsonResponse({'message': 'Deck was deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)
+        return JsonResponse({'message': 'Card was deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)
