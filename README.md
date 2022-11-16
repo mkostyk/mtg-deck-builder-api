@@ -179,3 +179,54 @@ Requires authentication (Basic AUTH) - Tokens will come. Maybe.
     "card_id": 1115
 }
 ```
+
+## POST - register/ - Register a new account
+
+### Example:
+```POST http://127.0.0.1:8000/register/```
+
+### Body example:
+
+```
+{
+	"username": "Test_user",
+	"password": "also test"
+}
+```
+
+### Response example:
+```
+{
+    "user": {
+        "id": 3,
+        "username": "Test_user"
+    },
+    "token": "b65444b949693bbfbb3a0efee76272ab32cdf5e10bfd70584546101e34b62da1"
+}
+```
+
+## POST - login/ - Login to an account
+
+Requires basic authentication (in header).
+
+### Example:
+```POST http://127.0.0.1:8000/login/```
+
+### Body example:
+
+```
+{
+	"username": "Test_user",
+	"password": "also test"
+}
+```
+
+### Response example:
+```
+{
+    "expiry": "2022-11-14T20:33:14.984243Z",
+    "token": "e0d5f772ad2b50dbb428d5e89bd61056fa769897cbafbd0834fe4fd72201a3a1"
+}
+```
+
+## logout/ and logoutall/ - coming soon
