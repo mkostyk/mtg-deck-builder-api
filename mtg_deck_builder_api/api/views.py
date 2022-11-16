@@ -58,7 +58,7 @@ class CardView(APIView):
     
 class DeckView(APIView):
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticatedOrReadOnly] # TODO - tylko dany użytkownik
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get(self, request):
         queryset = CardsInDeck.objects.none()
@@ -67,16 +67,21 @@ class DeckView(APIView):
         name = request.query_params.get('name')
         user_id = request.query_params.get('user_id')
 
+        # Filtering by query parameters
         if id is not None:
             queryset = Deck.objects.filter(id=id)
         if name is not None:
             queryset = Deck.objects.filter(name__icontains=name)
         if user_id is not None:
-            queryset = Deck.objects.filter(user_id=user_id)          
+            queryset = Deck.objects.filter(user_id=user_id)
+
+
+        # Filtering private decks
+        if not request.user.is_anonymous:
+            queryset = queryset.filter(private=False) | queryset.filter(author=request.user) # To jest SQLowy OR
+        else:
+            queryset = queryset.filter(private=False)
         
-        # TODO - error handling
-        queryset = queryset.filter(private=False)
-        print(queryset)
         serializer = DeckSerializer(queryset, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -102,9 +107,8 @@ class DeckView(APIView):
 
 
 class CardsInDeckView(APIView):
-    #authentication_classes = [BasicAuthentication]
-    #permission_classes = [IsAuthenticatedOrReadOnly] # TODO - tylko dany użytkownik
-
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get(self, request):
         queryset = CardsInDeck.objects.none()
