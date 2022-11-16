@@ -101,8 +101,8 @@ class DeckView(APIView):
         if deck_serializer.is_valid():
             deck_serializer.save(author=request.user)
         
-            return JsonResponse(deck_serializer.data, status=status.HTTP_201_CREATED) 
-        return JsonResponse(deck_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(deck_serializer.data, status=status.HTTP_201_CREATED) 
+        return Response(deck_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
     def delete(self, request):
@@ -118,7 +118,7 @@ class DeckView(APIView):
         deck.delete()
 
         # TODO - error handling
-        return JsonResponse({'message': 'Deck was deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({}, status=status.HTTP_204_NO_CONTENT)
     
 
 
@@ -136,7 +136,7 @@ class CardsInDeckView(APIView):
             #Checking if chosen deck is public.
             try:
                 deck = Deck.objects.get(Q(id = deck_id) & (Q(private = False) | Q(author = request.user)))
-                queryset = queryset.filter(deck_id = deck_id)
+                queryset = queryset.filter(deck = deck)
             except Deck.DoesNotExist:
                 return Response({"message" : "Bad request: chosen deck does not exist or is not public"},
                                 status=status.HTTP_400_BAD_REQUEST)
@@ -152,31 +152,40 @@ class CardsInDeckView(APIView):
         card_data = JSONParser().parse(request)
         card_serializer = CardsInDeckSerializer(data=card_data)
 
+        print(card_data)
+
         # Checking if we are trying to add to our own deck.
         try:
-            deck = Deck.objects.get(id=card_data.deck_id, author=request.user)
-        except Deck.DoesNotExist:
-            return Response({"message" : "Bad request: chosen deck does not exist or you are not its author"},
+            deck = Deck.objects.get(id=card_data['deck_id'], author=request.user)
+            card = Card.objects.get(id=card_data['card_id'])
+        except Deck.DoesNotExist or Card.DoesNotExist:
+            return Response({"message" : "Bad request: chosen card/deck does not exist or you are not this deck's author"},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        if card_serializer.is_valid() and deck.exists():
+        if card_serializer.is_valid():
+            card_serializer.deck = deck
+            card_serializer.card = card
             card_serializer.save()
-            return JsonResponse(card_serializer.data, status=status.HTTP_201_CREATED) 
 
-        return JsonResponse(card_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(card_serializer.data, status=status.HTTP_201_CREATED) 
+
+        return Response(card_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     
     def delete(self, request):
         card_id = request.query_params.get('card_id')
         
         try:
-            deck_id = CardsInDeck.object.get(id=card_id).deck_id
-            deck = Deck.objects.get(id=deck_id, author=request.user)
-        except Deck.DoesNotExist:
-            return Response({"message" : "Bad request: chosen card does not exist or you are not its owner"},
+            deck = CardsInDeck.objects.get(id=card_id).deck
+        except CardsInDeck.DoesNotExist:
+            return Response({"message" : "Bad request: chosen card does not exist"},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        CardsInDeck.object.get(id=card_id).delete()
+        if deck.author == request.user:
+            CardsInDeck.objects.get(id=card_id).delete()
+        else:
+            return Response({"message" : "Bad request: you are not this deck's author"},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         # TODO - error handling
-        return JsonResponse({'message': 'Card was deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({}, status=status.HTTP_204_NO_CONTENT)

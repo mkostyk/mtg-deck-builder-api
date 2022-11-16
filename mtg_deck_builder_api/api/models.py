@@ -36,5 +36,5 @@ class Deck(models.Model):
 #Users are built in
 
 class CardsInDeck(models.Model):
-    deck_id = models.PositiveIntegerField() # TODO - many-to-one relashionship - use foreign key
-    card_id = models.PositiveIntegerField()
+    deck = models.ForeignKey(Deck, on_delete=models.CASCADE)
+    card = models.ForeignKey(Card, on_delete=models.CASCADE)
