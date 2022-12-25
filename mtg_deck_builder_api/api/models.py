@@ -58,7 +58,7 @@ class Prices(models.Model):
 class Images(models.Model):
     card = models.OneToOneField(Card, on_delete=models.CASCADE, primary_key=True)
     small = models.TextField(null=True)
-    medium = models.TextField(null=True)
+    normal = models.TextField(null=True)
     large = models.TextField(null=True)
     png = models.TextField(null=True)
     art_crop = models.TextField(null=True)

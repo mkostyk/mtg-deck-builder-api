@@ -77,7 +77,7 @@ class PricesSerializer(serializers.HyperlinkedModelSerializer):
 class ImagesSerializer(serializers.HyperlinkedModelSerializer):
     card_id = serializers.IntegerField()
     small = serializers.CharField(max_length=200)
-    medium = serializers.CharField(max_length=200)
+    normal = serializers.CharField(max_length=200)
     large = serializers.CharField(max_length=200)
     png = serializers.CharField(max_length=200)
     art_crop = serializers.CharField(max_length=200)
@@ -85,7 +85,7 @@ class ImagesSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Images
-        fields = ("card_id", "small", "medium", "large", "png", "art_crop", "border_crop")
+        fields = ("card_id", "small", "normal", "large", "png", "art_crop", "border_crop")
 
 
 class DeckSerializer(serializers.HyperlinkedModelSerializer):

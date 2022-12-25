@@ -37,18 +37,26 @@ class LoginView(KnoxLoginView):
 # TODO - error handling
 class CardView(APIView):
     def get(self, request):
-        queryset = CardsInDeck.objects.none()
+        queryset = Card.objects.all()
 
         id = request.query_params.get('id')
         name = request.query_params.get('name')
         type = request.query_params.get('type')
 
+        if id is None and name is None and type is None:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
         if id is not None:
-            queryset = Card.objects.filter(id=id)
+            queryset = queryset.filter(id=id)
         if name is not None:
-            queryset = Card.objects.filter(card_name__icontains=name)
+            queryset = queryset.filter(card_name__icontains=name)
         if type is not None:
-            queryset = Card.objects.filter(type_line__icontains=type)
+            queryset = queryset.filter(type_line__icontains=type)
+
+        if not queryset.exists():
+            return Response({"message" : "Not found: try again with different parameters"},
+                            status=status.HTTP_404_NOT_FOUND)
 
         # TODO - ogarnąć to
         #queryset = Card.objects.raw('SELECT * FROM cards WHERE card_name = %s', [name])
@@ -63,27 +71,32 @@ class DeckView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get(self, request):
-        queryset = Deck.objects.none()
+        queryset = Deck.objects.all()
 
         id = request.query_params.get('id')
         name = request.query_params.get('name')
         user_id = request.query_params.get('user_id')
 
+        if id is None and name is None and user_id is None:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
         # Filtering by query parameters
         if id is not None:
-            queryset = Deck.objects.filter(id=id)
+            queryset = queryset.filter(id=id)
         if name is not None:
-            queryset = Deck.objects.filter(name__icontains=name)
+            queryset = queryset.filter(name__icontains=name)
         if user_id is not None:
             try:
                 user = User.objects.get(id=user_id)
-                queryset = Deck.objects.filter(author=user)
+                queryset = queryset.filter(author=user)
             except User.DoesNotExist:
                 return Response({"message" : "Not found: user does not exist"},
                                   status=status.HTTP_404_NOT_FOUND)
-        else:
-            return Response({"message" : "Bad request: missing query parameters"}, 
-                              status=status.HTTP_400_BAD_REQUEST)
+
+        if not queryset.exists():
+            return Response({"message" : "Not found: try again with different parameters"},
+                            status=status.HTTP_404_NOT_FOUND)
 
 
         # Filtering private decks
@@ -93,7 +106,6 @@ class DeckView(APIView):
             queryset = queryset.filter(private=False)
         
         serializer = DeckSerializer(queryset, many=True)
-
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -150,8 +162,6 @@ class CardsInDeckView(APIView):
         else:
             return Response({"message" : "Bad request: you have to specify deck id"},
                             status=status.HTTP_400_BAD_REQUEST)
-
-        print(queryset)
       
         serializer = CardsInDeckSerializer(queryset, many=True)
         return Response(serializer.data)
@@ -202,13 +212,62 @@ class CardsInDeckView(APIView):
 
 class PricesView(APIView):
     def get(self, request):
-        queryset = Prices.objects.none()
+        queryset = Prices.objects.all()
 
         card_id = request.query_params.get('id')
+        less_than = request.query_params.get('less_than')
+        more_than = request.query_params.get('more_than')
+
+        if card_id is None and less_than is None and more_than is None:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
         if card_id is not None:
-            queryset = Prices.objects.filter(card_id=card_id)
-        else :
-            return Response({"message" : "Bad request: you have to specify card id"},
-                            status=status.HTTP_400_BAD_REQUEST)
-        
-        return Response(queryset, status=status.HTTP_200_OK)
+            queryset = queryset.filter(card_id=card_id)
+        if less_than is not None:
+            queryset = queryset.filter(usd__lte=less_than) # TODO - other currencies
+        if more_than is not None:
+            queryset = queryset.filter(usd__gte=more_than)
+
+        if not queryset.exists():
+            return Response({"message" : "Not found: try again with different parameters"},
+                            status=status.HTTP_404_NOT_FOUND)
+            
+        serializer = PricesSerializer(queryset[:10], many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class LegalitiesView(APIView):
+    def get(self, request):
+        card_id = request.query_params.get('id')
+
+        if card_id is not None:
+            try:
+                legalities = Legalities.objects.get(card_id=card_id)
+            except Legalities.DoesNotExist:
+                return Response({"message" : "Not found: chosen card does not exist"},
+                                status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+            
+        serializer = LegalitiesSerializer(legalities, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ImagesView(APIView):
+    def get(self, request):
+        card_id = request.query_params.get('id')
+
+        if card_id is not None:
+            try:
+                images = Images.objects.get(card_id=card_id)
+            except Images.DoesNotExist:
+                return Response({"message" : "Not found: chosen card does not exist"},
+                                status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = ImagesSerializer(images, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
