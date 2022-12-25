@@ -88,6 +88,14 @@ class ImagesSerializer(serializers.HyperlinkedModelSerializer):
         fields = ("card_id", "small", "normal", "large", "png", "art_crop", "border_crop")
 
 
+class DeckTagSerializer(serializers.HyperlinkedModelSerializer):
+    tag = serializers.CharField(max_length = 1000)
+
+    class Meta:
+        model = DeckTag
+        fields = ('deck_id', 'tag')
+
+
 class DeckSerializer(serializers.HyperlinkedModelSerializer):
     name = serializers.CharField(max_length = 1000)
     private = serializers.BooleanField()

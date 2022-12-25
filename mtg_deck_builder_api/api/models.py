@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models import UniqueConstraint
+from django.db.models.functions import Lower
 
 # TODO - card faces, prices & legalities
 
@@ -75,6 +77,16 @@ class Deck(models.Model):
 
 #Users are built in
 
-class CardsInDeck(models.Model):
+class CardsInDeck(models.Model): # TODO - można to przerobić na ManyToManyField
     deck = models.ForeignKey(Deck, on_delete=models.CASCADE)
     card = models.ForeignKey(Card, on_delete=models.CASCADE)
+
+
+class DeckTag(models.Model):
+    deck = models.ForeignKey(Deck, on_delete=models.CASCADE)
+    tag = models.CharField(max_length = 100)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=['deck', 'tag'], name='unique_tag') # TODO - lowercase/uppercase traktować tak samo?
+        ]

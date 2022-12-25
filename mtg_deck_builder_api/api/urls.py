@@ -20,5 +20,6 @@ urlpatterns = [
     path('prices/', views.PricesView.as_view()),
     path('legalities/', views.LegalitiesView.as_view()),
     path('images/', views.ImagesView.as_view()),
+    path('tags/', views.DeckTagView.as_view()),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework'))
 ]

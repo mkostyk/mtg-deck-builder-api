@@ -18,6 +18,12 @@ from .models import *
 # TODO - single objects instead of querysets
 # TODO - many to many fields
 
+def get_deck_from_id(user, deck_id):
+    if not user.is_anonymous:
+        return Deck.objects.get(Q(id = deck_id) & (Q(private = False) | Q(author = user)))
+    else:
+        return Deck.objects.get(Q(id = deck_id) & Q(private = False))
+
 class RegisterView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = CreateUserSerializer(data=request.data)
@@ -150,10 +156,7 @@ class CardsInDeckView(APIView):
         if deck_id is not None: 
             #Checking if chosen deck is public.
             try:
-                if not request.user.is_anonymous:
-                    deck = Deck.objects.get(Q(id = deck_id) & (Q(private = False) | Q(author=request.user)))
-                else:
-                    deck = Deck.objects.get(Q(id = deck_id) & Q(private = False))
+                deck = get_deck_from_id(request.user, deck_id)
                     
                 queryset = queryset.filter(deck = deck)
             except Deck.DoesNotExist:
@@ -162,6 +165,10 @@ class CardsInDeckView(APIView):
         else:
             return Response({"message" : "Bad request: you have to specify deck id"},
                             status=status.HTTP_400_BAD_REQUEST)
+
+        if not queryset.exists():
+            return Response({"message" : "Not found: try again with different parameters"},
+                            status=status.HTTP_404_NOT_FOUND)
       
         serializer = CardsInDeckSerializer(queryset, many=True)
         return Response(serializer.data)
@@ -170,8 +177,6 @@ class CardsInDeckView(APIView):
     def post(self, request):
         card_data = JSONParser().parse(request)
         card_serializer = CardsInDeckSerializer(data=card_data)
-
-        print(card_data)
 
         # Checking if we are trying to add to our own deck.
         try:
@@ -182,10 +187,7 @@ class CardsInDeckView(APIView):
                             status=status.HTTP_404_NOT_FOUND)
 
         if card_serializer.is_valid():
-            card_serializer.deck = deck
-            card_serializer.card = card # TODO - czy to by zadziałało na pałę?
-            card_serializer.save()
-
+            card_serializer.save(deck=deck, card=card)  # TODO - testing
             return Response(card_serializer.data, status=status.HTTP_201_CREATED) 
 
         return Response(card_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -201,7 +203,12 @@ class CardsInDeckView(APIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         if deck.author == request.user:
-            CardsInDeck.objects.get(id=card_id).delete()
+            if card_id is None:
+                # Delete all cards from a deck
+                CardsInDeck.objects.filter(deck=deck).delete()
+            else:
+                # Delete a single card from a deck
+                CardsInDeck.objects.get(id=card_id).delete()
         else:
             return Response({"message" : "Bad request: you are not this deck's author"},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -271,3 +278,70 @@ class ImagesView(APIView):
 
         serializer = ImagesSerializer(images, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
+        
+
+class DeckTagView(APIView):
+    def get(self, request):
+        deck_id = request.query_params.get('id')
+        tag = request.query_params.get('tag')
+
+        if deck_id is None and tag is None:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
+        if deck_id is not None:
+            try:
+                deck = get_deck_from_id(request.user, deck_id)
+                tags = DeckTag.objects.filter(deck=deck)
+            except Deck.DoesNotExist:
+                return Response({"message" : "Not found: chosen deck does not exist"},
+                                status=status.HTTP_404_NOT_FOUND)
+        elif tag is not None:
+            tags = DeckTag.objects.filter(tag=tag)
+            for result_tag in tags:
+                if (result_tag.deck.author != request.user) and result_tag.deck.private:
+                    tags = tags.exclude(deck=result_tag.deck)
+        else:
+            return Response({"message" : "Bad request: missing query parameters"}, status=status.HTTP_400_BAD_REQUEST) # TODO
+
+        serializer = DeckTagSerializer(tags, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+    def post(self, request):
+        tag_data = JSONParser().parse(request)
+        tag_serializer = DeckTagSerializer(data=tag_data)
+
+        # Checking if we are trying to add to our own deck.
+        try:
+            deck = Deck.objects.get(id=tag_data['deck_id'], author=request.user)
+            tag = tag_data['tag']
+        except Deck.DoesNotExist:
+            return Response({"message" : "Not found: chosen deck does not exist or you are not this deck's author"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        if tag_serializer.is_valid():
+            tag_serializer.save(deck=deck, tag=tag) # TODO - testing
+            return Response(tag_serializer.data, status=status.HTTP_201_CREATED) 
+
+        return Response(tag_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    def delete(self, request):
+        deck_id = request.query_params.get('deck_id')
+        tag = request.query_params.get('tag')
+
+        try:
+            deck = get_deck_from_id(request.user, deck_id)
+        except Deck.DoesNotExist:
+            return Response({"message" : "Not found: chosen deck does not exist"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        if tag is None:
+            # Delete all tags from deck.
+            DeckTag.objects.filter(deck=deck).delete()
+        else:
+            # Delete specific tag from deck.
+            DeckTag.objects.filter(deck=deck, tag=tag).delete()
+
+        return Response({}, status=status.HTTP_204_NO_CONTENT)
