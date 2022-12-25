@@ -16,7 +16,13 @@ from .models import *
 # TODO - error codes
 # TODO - JsonResponse
 # TODO - single objects instead of querysets
+# TODO - many to many fields
 
+def get_deck_from_id(user, deck_id):
+    if not user.is_anonymous:
+        return Deck.objects.get(Q(id = deck_id) & (Q(private = False) | Q(author = user)))
+    else:
+        return Deck.objects.get(Q(id = deck_id) & Q(private = False))
 
 class RegisterView(APIView):
     def post(self, request, *args, **kwargs):
@@ -37,25 +43,33 @@ class LoginView(KnoxLoginView):
 # TODO - error handling
 class CardView(APIView):
     def get(self, request):
-        queryset = CardsInDeck.objects.none()
+        queryset = Card.objects.all()
 
         id = request.query_params.get('id')
         name = request.query_params.get('name')
         type = request.query_params.get('type')
 
+        if id is None and name is None and type is None:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
         if id is not None:
-            queryset = Card.objects.filter(id=id)
+            queryset = queryset.filter(id=id)
         if name is not None:
-            queryset = Card.objects.filter(card_name__icontains=name)
+            queryset = queryset.filter(card_name__icontains=name)
         if type is not None:
-            queryset = Card.objects.filter(type_line__icontains=type)
+            queryset = queryset.filter(type_line__icontains=type)
+
+        if not queryset.exists():
+            return Response({"message" : "Not found: try again with different parameters"},
+                            status=status.HTTP_404_NOT_FOUND)
 
         # TODO - ogarnąć to
         #queryset = Card.objects.raw('SELECT * FROM cards WHERE card_name = %s', [name])
 
         serializer = CardSerializer(queryset[:10], many=True)
         
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     
 class DeckView(APIView):
@@ -63,24 +77,32 @@ class DeckView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get(self, request):
-        queryset = CardsInDeck.objects.none()
+        queryset = Deck.objects.all()
 
         id = request.query_params.get('id')
         name = request.query_params.get('name')
         user_id = request.query_params.get('user_id')
 
+        if id is None and name is None and user_id is None:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
         # Filtering by query parameters
         if id is not None:
-            queryset = Deck.objects.filter(id=id)
+            queryset = queryset.filter(id=id)
         if name is not None:
-            queryset = Deck.objects.filter(name__icontains=name)
+            queryset = queryset.filter(name__icontains=name)
         if user_id is not None:
             try:
                 user = User.objects.get(id=user_id)
-                queryset = Deck.objects.filter(author=user)
+                queryset = queryset.filter(author=user)
             except User.DoesNotExist:
-                return Response({"message" : "Bad request: user ID is incorrect"},
-                            status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message" : "Not found: user does not exist"},
+                                  status=status.HTTP_404_NOT_FOUND)
+
+        if not queryset.exists():
+            return Response({"message" : "Not found: try again with different parameters"},
+                            status=status.HTTP_404_NOT_FOUND)
 
 
         # Filtering private decks
@@ -90,7 +112,6 @@ class DeckView(APIView):
             queryset = queryset.filter(private=False)
         
         serializer = DeckSerializer(queryset, many=True)
-
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -101,8 +122,8 @@ class DeckView(APIView):
         if deck_serializer.is_valid():
             deck_serializer.save(author=request.user)
         
-            return JsonResponse(deck_serializer.data, status=status.HTTP_201_CREATED) 
-        return JsonResponse(deck_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(deck_serializer.data, status=status.HTTP_201_CREATED) 
+        return Response(deck_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
     def delete(self, request):
@@ -112,13 +133,13 @@ class DeckView(APIView):
         try:
             deck = Deck.objects.get(id=deck_id, author=request.user)
         except Deck.DoesNotExist:
-            return Response({"message" : "Bad request: chosen deck does not exist or you are not its author"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message" : "Not found: chosen deck does not exist or you are not its author"},
+                            status=status.HTTP_404_NOT_FOUND)
 
         deck.delete()
 
         # TODO - error handling
-        return JsonResponse({'message': 'Deck was deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({}, status=status.HTTP_204_NO_CONTENT)
     
 
 
@@ -135,14 +156,19 @@ class CardsInDeckView(APIView):
         if deck_id is not None: 
             #Checking if chosen deck is public.
             try:
-                deck = Deck.objects.get(Q(id = deck_id) & (Q(private = False) | Q(author = request.user)))
-                queryset = queryset.filter(deck_id = deck_id)
+                deck = get_deck_from_id(request.user, deck_id)
+                    
+                queryset = queryset.filter(deck = deck)
             except Deck.DoesNotExist:
-                return Response({"message" : "Bad request: chosen deck does not exist or is not public"},
-                                status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message" : "Not found: chosen deck does not exist or is not public"},
+                                status=status.HTTP_404_NOT_FOUND)
         else:
             return Response({"message" : "Bad request: you have to specify deck id"},
                             status=status.HTTP_400_BAD_REQUEST)
+
+        if not queryset.exists():
+            return Response({"message" : "Not found: try again with different parameters"},
+                            status=status.HTTP_404_NOT_FOUND)
       
         serializer = CardsInDeckSerializer(queryset, many=True)
         return Response(serializer.data)
@@ -154,29 +180,168 @@ class CardsInDeckView(APIView):
 
         # Checking if we are trying to add to our own deck.
         try:
-            deck = Deck.objects.get(id=card_data.deck_id, author=request.user)
-        except Deck.DoesNotExist:
-            return Response({"message" : "Bad request: chosen deck does not exist or you are not its author"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            deck = Deck.objects.get(id=card_data['deck_id'], author=request.user)
+            card = Card.objects.get(id=card_data['card_id'])
+        except Deck.DoesNotExist or Card.DoesNotExist:
+            return Response({"message" : "Not found: chosen card/deck does not exist or you are not this deck's author"},
+                            status=status.HTTP_404_NOT_FOUND)
 
-        if card_serializer.is_valid() and deck.exists():
-            card_serializer.save()
-            return JsonResponse(card_serializer.data, status=status.HTTP_201_CREATED) 
+        if card_serializer.is_valid():
+            card_serializer.save(deck=deck, card=card)  # TODO - testing
+            return Response(card_serializer.data, status=status.HTTP_201_CREATED) 
 
-        return JsonResponse(card_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(card_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     
     def delete(self, request):
         card_id = request.query_params.get('card_id')
         
         try:
-            deck_id = CardsInDeck.object.get(id=card_id).deck_id
-            deck = Deck.objects.get(id=deck_id, author=request.user)
-        except Deck.DoesNotExist:
-            return Response({"message" : "Bad request: chosen card does not exist or you are not its owner"},
+            deck = CardsInDeck.objects.get(id=card_id).deck
+        except CardsInDeck.DoesNotExist:
+            return Response({"message" : "Bad request: chosen card does not exist"},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        CardsInDeck.object.get(id=card_id).delete()
+        if deck.author == request.user:
+            if card_id is None:
+                # Delete all cards from a deck
+                CardsInDeck.objects.filter(deck=deck).delete()
+            else:
+                # Delete a single card from a deck
+                CardsInDeck.objects.get(id=card_id).delete()
+        else:
+            return Response({"message" : "Bad request: you are not this deck's author"},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         # TODO - error handling
-        return JsonResponse({'message': 'Card was deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({}, status=status.HTTP_204_NO_CONTENT)
+
+
+class PricesView(APIView):
+    def get(self, request):
+        queryset = Prices.objects.all()
+
+        card_id = request.query_params.get('id')
+        less_than = request.query_params.get('less_than')
+        more_than = request.query_params.get('more_than')
+
+        if card_id is None and less_than is None and more_than is None:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
+        if card_id is not None:
+            queryset = queryset.filter(card_id=card_id)
+        if less_than is not None:
+            queryset = queryset.filter(usd__lte=less_than) # TODO - other currencies
+        if more_than is not None:
+            queryset = queryset.filter(usd__gte=more_than)
+
+        if not queryset.exists():
+            return Response({"message" : "Not found: try again with different parameters"},
+                            status=status.HTTP_404_NOT_FOUND)
+            
+        serializer = PricesSerializer(queryset[:10], many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class LegalitiesView(APIView):
+    def get(self, request):
+        card_id = request.query_params.get('id')
+
+        if card_id is not None:
+            try:
+                legalities = Legalities.objects.get(card_id=card_id)
+            except Legalities.DoesNotExist:
+                return Response({"message" : "Not found: chosen card does not exist"},
+                                status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+            
+        serializer = LegalitiesSerializer(legalities, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ImagesView(APIView):
+    def get(self, request):
+        card_id = request.query_params.get('id')
+
+        if card_id is not None:
+            try:
+                images = Images.objects.get(card_id=card_id)
+            except Images.DoesNotExist:
+                return Response({"message" : "Not found: chosen card does not exist"},
+                                status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = ImagesSerializer(images, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+
+class DeckTagView(APIView):
+    def get(self, request):
+        deck_id = request.query_params.get('id')
+        tag = request.query_params.get('tag')
+
+        if deck_id is None and tag is None:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
+        if deck_id is not None:
+            try:
+                deck = get_deck_from_id(request.user, deck_id)
+                tags = DeckTag.objects.filter(deck=deck)
+            except Deck.DoesNotExist:
+                return Response({"message" : "Not found: chosen deck does not exist"},
+                                status=status.HTTP_404_NOT_FOUND)
+        elif tag is not None:
+            tags = DeckTag.objects.filter(tag=tag)
+            for result_tag in tags:
+                if (result_tag.deck.author != request.user) and result_tag.deck.private:
+                    tags = tags.exclude(deck=result_tag.deck)
+        else:
+            return Response({"message" : "Bad request: missing query parameters"}, status=status.HTTP_400_BAD_REQUEST) # TODO
+
+        serializer = DeckTagSerializer(tags, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+    def post(self, request):
+        tag_data = JSONParser().parse(request)
+        tag_serializer = DeckTagSerializer(data=tag_data)
+
+        # Checking if we are trying to add to our own deck.
+        try:
+            deck = Deck.objects.get(id=tag_data['deck_id'], author=request.user)
+            tag = tag_data['tag']
+        except Deck.DoesNotExist:
+            return Response({"message" : "Not found: chosen deck does not exist or you are not this deck's author"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        if tag_serializer.is_valid():
+            tag_serializer.save(deck=deck, tag=tag) # TODO - testing
+            return Response(tag_serializer.data, status=status.HTTP_201_CREATED) 
+
+        return Response(tag_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    def delete(self, request):
+        deck_id = request.query_params.get('deck_id')
+        tag = request.query_params.get('tag')
+
+        try:
+            deck = get_deck_from_id(request.user, deck_id)
+        except Deck.DoesNotExist:
+            return Response({"message" : "Not found: chosen deck does not exist"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        if tag is None:
+            # Delete all tags from deck.
+            DeckTag.objects.filter(deck=deck).delete()
+        else:
+            # Delete specific tag from deck.
+            DeckTag.objects.filter(deck=deck, tag=tag).delete()
+
+        return Response({}, status=status.HTTP_204_NO_CONTENT)

@@ -17,5 +17,9 @@ urlpatterns = [
     path('cards/', views.CardView.as_view()),
     path('decks/', views.DeckView.as_view()),
     path('cardsInDeck/', views.CardsInDeckView.as_view()),
+    path('prices/', views.PricesView.as_view()),
+    path('legalities/', views.LegalitiesView.as_view()),
+    path('images/', views.ImagesView.as_view()),
+    path('tags/', views.DeckTagView.as_view()),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework'))
 ]
