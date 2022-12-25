@@ -5,6 +5,14 @@ name = "pypi"
 
 [packages]
 django = "*"
+djangorestframework = "*"
+knox = "*"
+pymysql = "*"
+django-cors-headers = "*"
+django-cryptography = "*"
+django-jinja = "*"
+boto3 = "*"
+django-rest-knox = "*"
 
 [dev-packages]
 

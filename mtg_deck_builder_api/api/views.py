@@ -55,7 +55,7 @@ class CardView(APIView):
 
         serializer = CardSerializer(queryset[:10], many=True)
         
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     
 class DeckView(APIView):
@@ -80,7 +80,7 @@ class DeckView(APIView):
                 queryset = Deck.objects.filter(author=user)
             except User.DoesNotExist:
                 return Response({"message" : "Bad request: user ID is incorrect"},
-                            status=status.HTTP_400_BAD_REQUEST)
+                                  status=status.HTTP_400_BAD_REQUEST)
 
 
         # Filtering private decks
@@ -164,7 +164,7 @@ class CardsInDeckView(APIView):
 
         if card_serializer.is_valid():
             card_serializer.deck = deck
-            card_serializer.card = card
+            card_serializer.card = card # TODO - czy to by zadziałało na pałę?
             card_serializer.save()
 
             return Response(card_serializer.data, status=status.HTTP_201_CREATED) 
