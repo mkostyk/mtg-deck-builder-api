@@ -54,7 +54,7 @@ class LegalitiesSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Legalities
-        fields = ("id", "card_id", "standard", "future", "historic", "gladiator", "pioneer",
+        fields = ("card_id", "standard", "future", "historic", "gladiator", "pioneer",
                   "explorer", "modern", "legacy", "pauper", "vintage",
                   "penny", "commander", "brawl", "historicbrawl", "alchemy",
                   "paupercommander", "duel", "oldschool", "premodern")
@@ -71,7 +71,7 @@ class PricesSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Prices
-        fields = ("id", "card_id", "usd", "usd_foil", "usd_etched", "eur", "eur_foil", "tix")
+        fields = ("card_id", "usd", "usd_foil", "usd_etched", "eur", "eur_foil", "tix")
 
 
 class ImagesSerializer(serializers.HyperlinkedModelSerializer):
@@ -85,7 +85,7 @@ class ImagesSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Images
-        fields = ("id", "card_id", "small", "medium", "large", "png", "art_crop", "border_crop")
+        fields = ("card_id", "small", "medium", "large", "png", "art_crop", "border_crop")
 
 
 class DeckSerializer(serializers.HyperlinkedModelSerializer):

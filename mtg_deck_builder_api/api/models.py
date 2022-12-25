@@ -23,7 +23,7 @@ class Card(models.Model):
 
 
 class Legalities(models.Model):
-    card = models.ForeignKey(Card, on_delete=models.CASCADE)
+    card = models.OneToOneField(Card, on_delete=models.CASCADE, primary_key=True)
     standard = models.CharField(max_length=20)
     future = models.CharField(max_length=20)
     historic = models.CharField(max_length=20)
@@ -46,7 +46,7 @@ class Legalities(models.Model):
 
 
 class Prices(models.Model):
-    card = models.ForeignKey(Card, on_delete=models.CASCADE)
+    card = models.OneToOneField(Card, on_delete=models.CASCADE, primary_key=True)
     usd = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     usd_foil = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     usd_etched = models.DecimalField(max_digits=10, decimal_places=2, null=True)
@@ -56,7 +56,7 @@ class Prices(models.Model):
     
 
 class Images(models.Model):
-    card = models.ForeignKey(Card, on_delete=models.CASCADE)
+    card = models.OneToOneField(Card, on_delete=models.CASCADE, primary_key=True)
     small = models.TextField(null=True)
     medium = models.TextField(null=True)
     large = models.TextField(null=True)

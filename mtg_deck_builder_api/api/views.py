@@ -16,7 +16,7 @@ from .models import *
 # TODO - error codes
 # TODO - JsonResponse
 # TODO - single objects instead of querysets
-
+# TODO - many to many fields
 
 class RegisterView(APIView):
     def post(self, request, *args, **kwargs):
@@ -63,7 +63,7 @@ class DeckView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get(self, request):
-        queryset = CardsInDeck.objects.none()
+        queryset = Deck.objects.none()
 
         id = request.query_params.get('id')
         name = request.query_params.get('name')
@@ -79,8 +79,11 @@ class DeckView(APIView):
                 user = User.objects.get(id=user_id)
                 queryset = Deck.objects.filter(author=user)
             except User.DoesNotExist:
-                return Response({"message" : "Bad request: user ID is incorrect"},
-                                  status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message" : "Not found: user does not exist"},
+                                  status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
 
 
         # Filtering private decks
@@ -112,8 +115,8 @@ class DeckView(APIView):
         try:
             deck = Deck.objects.get(id=deck_id, author=request.user)
         except Deck.DoesNotExist:
-            return Response({"message" : "Bad request: chosen deck does not exist or you are not its author"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message" : "Not found: chosen deck does not exist or you are not its author"},
+                            status=status.HTTP_404_NOT_FOUND)
 
         deck.delete()
 
@@ -135,14 +138,20 @@ class CardsInDeckView(APIView):
         if deck_id is not None: 
             #Checking if chosen deck is public.
             try:
-                deck = Deck.objects.get(Q(id = deck_id) & (Q(private = False) | Q(author = request.user)))
+                if not request.user.is_anonymous:
+                    deck = Deck.objects.get(Q(id = deck_id) & (Q(private = False) | Q(author=request.user)))
+                else:
+                    deck = Deck.objects.get(Q(id = deck_id) & Q(private = False))
+                    
                 queryset = queryset.filter(deck = deck)
             except Deck.DoesNotExist:
-                return Response({"message" : "Bad request: chosen deck does not exist or is not public"},
-                                status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message" : "Not found: chosen deck does not exist or is not public"},
+                                status=status.HTTP_404_NOT_FOUND)
         else:
             return Response({"message" : "Bad request: you have to specify deck id"},
                             status=status.HTTP_400_BAD_REQUEST)
+
+        print(queryset)
       
         serializer = CardsInDeckSerializer(queryset, many=True)
         return Response(serializer.data)
@@ -159,8 +168,8 @@ class CardsInDeckView(APIView):
             deck = Deck.objects.get(id=card_data['deck_id'], author=request.user)
             card = Card.objects.get(id=card_data['card_id'])
         except Deck.DoesNotExist or Card.DoesNotExist:
-            return Response({"message" : "Bad request: chosen card/deck does not exist or you are not this deck's author"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message" : "Not found: chosen card/deck does not exist or you are not this deck's author"},
+                            status=status.HTTP_404_NOT_FOUND)
 
         if card_serializer.is_valid():
             card_serializer.deck = deck
@@ -189,3 +198,17 @@ class CardsInDeckView(APIView):
 
         # TODO - error handling
         return Response({}, status=status.HTTP_204_NO_CONTENT)
+
+
+class PricesView(APIView):
+    def get(self, request):
+        queryset = Prices.objects.none()
+
+        card_id = request.query_params.get('id')
+        if card_id is not None:
+            queryset = Prices.objects.filter(card_id=card_id)
+        else :
+            return Response({"message" : "Bad request: you have to specify card id"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response(queryset, status=status.HTTP_200_OK)
