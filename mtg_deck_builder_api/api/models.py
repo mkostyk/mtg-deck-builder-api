@@ -1,9 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import UniqueConstraint
-from django.db.models.functions import Lower
-
-# TODO - card faces, prices & legalities
 
 class Card(models.Model):
     second_side = models.IntegerField(null=True) # TODO - foreign key to self

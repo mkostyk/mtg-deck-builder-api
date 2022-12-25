@@ -89,6 +89,7 @@ class ImagesSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class DeckTagSerializer(serializers.HyperlinkedModelSerializer):
+    deck_id = serializers.IntegerField()
     tag = serializers.CharField(max_length = 1000)
 
     class Meta:
@@ -156,3 +157,12 @@ class AuthSerializer(serializers.Serializer):
 
         attrs['user'] = user
         return 
+
+
+class UserWithTokenSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+    token = serializers.CharField()
+
+    class Meta:
+        model = User
+        fields = ('user', 'token')
