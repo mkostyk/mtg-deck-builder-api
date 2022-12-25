@@ -11,12 +11,17 @@ from knox.views import LoginView as KnoxLoginView
 from knox.models import AuthToken
 from django.db.models import Q
 
+# docs stuff
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
 from .serializers import *
 from .models import *
 # TODO - error codes
 # TODO - JsonResponse
 # TODO - single objects instead of querysets
 # TODO - many to many fields
+# TODO - examples in docs, lepsze opisy, autentykacja
 
 def get_deck_from_id(user, deck_id):
     if not user.is_anonymous:
@@ -24,7 +29,18 @@ def get_deck_from_id(user, deck_id):
     else:
         return Deck.objects.get(Q(id = deck_id) & Q(private = False))
 
+
+def get_page(page):
+    if page is None:
+        page = 1
+    else:
+        page = int(page)
+    return page
+
+
 class RegisterView(APIView):
+    @swagger_auto_schema(request_body=CreateUserSerializer, operation_description="Register a new user", 
+    responses={201: UserWithTokenSerializer, 400: "Bad request: missing/incorrect data"})
     def post(self, request, *args, **kwargs):
         serializer = CreateUserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -32,25 +48,31 @@ class RegisterView(APIView):
         return Response({
             "user": UserSerializer(user, context=serializer).data,
             "token": AuthToken.objects.create(user)[1]
-        })
+        }, status=status.HTTP_201_CREATED)
 
 
-# TODO
 class LoginView(KnoxLoginView):
     authentication_classes = [BasicAuthentication] #TODO
 
 
-# TODO - error handling
 class CardView(APIView):
+    id_param = openapi.Parameter('id', openapi.IN_QUERY, description="Card id", type=openapi.TYPE_INTEGER)
+    name_param = openapi.Parameter('name', openapi.IN_QUERY, description="Card name", type=openapi.TYPE_STRING)
+    type_param = openapi.Parameter('type', openapi.IN_QUERY, description="Card type", type=openapi.TYPE_STRING)
+    page_param = openapi.Parameter('page', openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER, default=1)
+
+    @swagger_auto_schema(manual_parameters=[id_param, name_param, type_param, page_param], operation_description="Get cards from the database",
+    responses={200: CardSerializer(many=True), 400: "Bad request: missing/incorrect query parameters", 404: "Not found: try again with different parameters"})
     def get(self, request):
         queryset = Card.objects.all()
 
         id = request.query_params.get('id')
         name = request.query_params.get('name')
         type = request.query_params.get('type')
+        page = get_page(request.query_params.get('page'))
 
-        if id is None and name is None and type is None:
-            return Response({"message" : "Bad request: missing query parameters"}, 
+        if id is None and name is None and type is None or page < 1:
+            return Response({"message" : "Bad request: missing/incorrect query parameters"}, 
                               status=status.HTTP_400_BAD_REQUEST)
 
         if id is not None:
@@ -66,8 +88,10 @@ class CardView(APIView):
 
         # TODO - ogarnąć to
         #queryset = Card.objects.raw('SELECT * FROM cards WHERE card_name = %s', [name])
+        start = (page - 1) * 10
+        end = page * 10
 
-        serializer = CardSerializer(queryset[:10], many=True)
+        serializer = CardSerializer(queryset[start:end], many=True)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -76,12 +100,20 @@ class DeckView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    id_param = openapi.Parameter('id', openapi.IN_QUERY, description="Deck id", type=openapi.TYPE_INTEGER)
+    name_param = openapi.Parameter('name', openapi.IN_QUERY, description="Deck name", type=openapi.TYPE_STRING)
+    user_id_param = openapi.Parameter('user_id', openapi.IN_QUERY, description="User id", type=openapi.TYPE_INTEGER)
+    page_param = openapi.Parameter('page', openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER, default=1)
+
+    @swagger_auto_schema(manual_parameters=[id_param, name_param, user_id_param, page_param], operation_description="Get decks from the database",
+    responses={200: DeckSerializer(many=True), 400: "Bad request: missing query parameters", 404: "Not found: try again with different parameters"})
     def get(self, request):
         queryset = Deck.objects.all()
 
         id = request.query_params.get('id')
         name = request.query_params.get('name')
         user_id = request.query_params.get('user_id')
+        page = get_page(request.query_params.get('page'))
 
         if id is None and name is None and user_id is None:
             return Response({"message" : "Bad request: missing query parameters"}, 
@@ -110,11 +142,16 @@ class DeckView(APIView):
             queryset = queryset.filter(Q(private=False) | Q(author=request.user))
         else:
             queryset = queryset.filter(private=False)
+
+        start = (page - 1) * 10
+        end = page * 10
         
-        serializer = DeckSerializer(queryset, many=True)
+        serializer = DeckSerializer(queryset[start:end], many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+    @swagger_auto_schema(request_body=DeckSerializer(), operation_description="Create a new deck",
+    responses={201: DeckSerializer, 400: "Bad request: missing query parameters"})
     def post(self, request):
         deck_data = JSONParser().parse(request)
         deck_serializer = DeckSerializer(data=deck_data)
@@ -126,8 +163,14 @@ class DeckView(APIView):
         return Response(deck_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+    @swagger_auto_schema(manual_parameters=[id_param], operation_description="Delete a deck",
+    responses={200: "OK", 400: "Bad request: missing query parameters", 404: "Not found: chosen deck does not exist or you are not its author"})
     def delete(self, request):
-        deck_id = request.query_params.get('id')
+        deck_id = request.query_params.get('id') # TODO - (name, user_id) jako unique key
+
+        if deck_id is None:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
         
         # Checking if we are deck's author
         try:
@@ -139,7 +182,7 @@ class DeckView(APIView):
         deck.delete()
 
         # TODO - error handling
-        return Response({}, status=status.HTTP_204_NO_CONTENT)
+        return Response({}, status=status.HTTP_200_OK)
     
 
 
@@ -147,6 +190,10 @@ class CardsInDeckView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    deck_id_param = openapi.Parameter('deck_id', openapi.IN_QUERY, description="Deck id", type=openapi.TYPE_INTEGER)
+
+    @swagger_auto_schema(manual_parameters=[deck_id_param], operation_description="Get cards in deck from the database",
+    responses={200: CardsInDeckSerializer(many=True), 400: "Bad request: you have to specify deck id", 404: "Not found: chosen deck does not exist or is not public"})
     def get(self, request):
         queryset = CardsInDeck.objects.all()
 
@@ -174,6 +221,8 @@ class CardsInDeckView(APIView):
         return Response(serializer.data)
 
 
+    @swagger_auto_schema(request_body=CardsInDeckSerializer, operation_description="Add a card to a deck",
+    responses={201: CardsInDeckSerializer, 400: "Bad request: missing query parameters", 404: "Not found: chosen card/deck does not exist or you are not this deck's author"})
     def post(self, request):
         card_data = JSONParser().parse(request)
         card_serializer = CardsInDeckSerializer(data=card_data)
@@ -193,6 +242,8 @@ class CardsInDeckView(APIView):
         return Response(card_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     
+    @swagger_auto_schema(manual_parameters=[deck_id_param], operation_description="Delete cards from a deck",
+    responses={200: "OK", 400: "Bad request: missing query parameters or you are not this deck's author", 404: "Not found: chosen card does not exist"})
     def delete(self, request):
         card_id = request.query_params.get('card_id')
         
@@ -214,10 +265,16 @@ class CardsInDeckView(APIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         # TODO - error handling
-        return Response({}, status=status.HTTP_204_NO_CONTENT)
+        return Response({}, status=status.HTTP_200_OK)
 
 
 class PricesView(APIView):
+    card_id_param = openapi.Parameter('id', openapi.IN_QUERY, description="Card id", type=openapi.TYPE_INTEGER)
+    less_than_param = openapi.Parameter('less_than', openapi.IN_QUERY, description="Maximum price", type=openapi.TYPE_NUMBER)
+    more_than_param = openapi.Parameter('more_than', openapi.IN_QUERY, description="Minimum price", type=openapi.TYPE_NUMBER)
+
+    @swagger_auto_schema(manual_parameters=[card_id_param, less_than_param, more_than_param], operation_description="Get prices from the database",
+    responses={200: PricesSerializer(many=True), 400: "Bad request: missing query parameters"})
     def get(self, request):
         queryset = Prices.objects.all()
 
@@ -245,6 +302,10 @@ class PricesView(APIView):
 
 
 class LegalitiesView(APIView):
+    card_id_param = openapi.Parameter('id', openapi.IN_QUERY, description="Card id", type=openapi.TYPE_INTEGER)
+
+    @swagger_auto_schema(manual_parameters=[card_id_param], operation_description="Get legalities from the database",
+    responses={200: LegalitiesSerializer, 400: "Bad request: missing query parameters", 404: "Not found: chosen card does not exist"})
     def get(self, request):
         card_id = request.query_params.get('id')
 
@@ -263,6 +324,10 @@ class LegalitiesView(APIView):
 
 
 class ImagesView(APIView):
+    card_id_param = openapi.Parameter('id', openapi.IN_QUERY, description="Card id", type=openapi.TYPE_INTEGER)
+
+    @swagger_auto_schema(manual_parameters=[card_id_param], operation_description="Get images from the database",
+    responses={200: ImagesSerializer, 400: "Bad request: missing query parameters", 404: "Not found: chosen card does not exist"})
     def get(self, request):
         card_id = request.query_params.get('id')
 
@@ -281,6 +346,11 @@ class ImagesView(APIView):
         
 
 class DeckTagView(APIView):
+    deck_id_param = openapi.Parameter('id', openapi.IN_QUERY, description="Deck id", type=openapi.TYPE_INTEGER)
+    tag_param = openapi.Parameter('tag', openapi.IN_QUERY, description="Tag", type=openapi.TYPE_STRING)
+
+    @swagger_auto_schema(manual_parameters=[deck_id_param, tag_param], operation_description="Get tags from the database",
+    responses={200: DeckTagSerializer(many=True), 400: "Bad request: missing query parameters", 404: "Not found: chosen deck does not exist"})
     def get(self, request):
         deck_id = request.query_params.get('id')
         tag = request.query_params.get('tag')
@@ -308,6 +378,8 @@ class DeckTagView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+    @swagger_auto_schema(request_body=DeckTagSerializer, operation_description="Add tag to the deck",
+    responses={201: DeckTagSerializer, 400: "Bad request: missing query parameters", 404: "Not found: chosen deck does not exist or you are not this deck's author"})
     def post(self, request):
         tag_data = JSONParser().parse(request)
         tag_serializer = DeckTagSerializer(data=tag_data)
@@ -321,12 +393,14 @@ class DeckTagView(APIView):
                             status=status.HTTP_404_NOT_FOUND)
 
         if tag_serializer.is_valid():
-            tag_serializer.save(deck=deck, tag=tag) # TODO - testing
+            tag_serializer.save(deck=deck, tag=tag) # TODO - chyba można bez argumentów?
             return Response(tag_serializer.data, status=status.HTTP_201_CREATED) 
 
         return Response(tag_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+    @swagger_auto_schema(request_body=DeckTagSerializer, operation_description="Delete tag from the deck", 
+    responses={200: "OK", 400: "Bad request: missing query parameters", 404: "Not found: chosen deck does not exist or you are not this deck's author"})
     def delete(self, request):
         deck_id = request.query_params.get('deck_id')
         tag = request.query_params.get('tag')
@@ -344,4 +418,4 @@ class DeckTagView(APIView):
             # Delete specific tag from deck.
             DeckTag.objects.filter(deck=deck, tag=tag).delete()
 
-        return Response({}, status=status.HTTP_204_NO_CONTENT)
+        return Response({}, status=status.HTTP_200_OK)

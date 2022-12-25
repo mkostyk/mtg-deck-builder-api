@@ -13,6 +13,11 @@ django-cryptography = "*"
 django-jinja = "*"
 boto3 = "*"
 django-rest-knox = "*"
+coreapi = "*"
+pyyaml = "*"
+uritemplate = "*"
+django-rest-swagger = "*"
+drf-yasg = "*"
 
 [dev-packages]
 
