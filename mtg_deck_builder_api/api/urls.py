@@ -37,6 +37,7 @@ urlpatterns = [
    path('tags/', views.DeckTagView.as_view()),
    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 
+   path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
    re_path(r'^docs(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
    re_path(r'^docs/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
    re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc')
