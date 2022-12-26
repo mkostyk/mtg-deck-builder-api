@@ -19,6 +19,7 @@ uritemplate = "*"
 django-rest-swagger = "*"
 drf-yasg = "*"
 gunicorn = "*"
+django-environ = "*"
 
 [dev-packages]
 
