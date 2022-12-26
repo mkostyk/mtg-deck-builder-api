@@ -166,3 +166,11 @@ class UserWithTokenSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('user', 'token')
+
+
+class ResponseTokenSerializer(serializers.Serializer):
+    expiry = serializers.DateTimeField()
+    token = serializers.CharField()
+
+    class Meta:
+        fields = ('expiry', 'token')
