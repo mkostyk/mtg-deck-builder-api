@@ -18,6 +18,7 @@ pyyaml = "*"
 uritemplate = "*"
 django-rest-swagger = "*"
 drf-yasg = "*"
+gunicorn = "*"
 
 [dev-packages]
 
