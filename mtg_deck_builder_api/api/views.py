@@ -1,14 +1,17 @@
-from rest_framework.authentication import BasicAuthentication
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework import status
+from rest_framework import permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import JSONParser 
-from rest_framework import status
+from rest_framework.authtoken.serializers import AuthTokenSerializer
+
+from knox.views import LoginView as KnoxLoginView
+from knox.auth import TokenAuthentication
+from knox.models import AuthToken
+
 from django.http import JsonResponse
 from django.shortcuts import get_list_or_404 # TODO - use this
-from knox.auth import TokenAuthentication
-from knox.views import LoginView as KnoxLoginView
-from knox.models import AuthToken
+from django.contrib.auth import login
 from django.db.models import Q
 
 # docs stuff
@@ -17,11 +20,10 @@ from drf_yasg import openapi
 
 from .serializers import *
 from .models import *
-# TODO - error codes
-# TODO - JsonResponse
 # TODO - single objects instead of querysets
 # TODO - many to many fields
-# TODO - examples in docs, lepsze opisy, autentykacja
+# TODO - examples in docs, lepsze opisy
+# TODO - request body w delete?
 
 def get_deck_from_id(user, deck_id):
     if not user.is_anonymous:
@@ -52,7 +54,17 @@ class RegisterView(APIView):
 
 
 class LoginView(KnoxLoginView):
-    authentication_classes = [BasicAuthentication] #TODO
+    permission_classes = [permissions.AllowAny]
+
+    @swagger_auto_schema(request_body=AuthTokenSerializer, operation_description="Login a user",
+    responses={200: ResponseTokenSerializer, 400: "Bad request: missing/incorrect data"})
+
+    def post(self, request, format=None):
+        serializer = AuthTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']  # Nie wiem czemu to krzyczy bo działa
+        login(request, user)
+        return super(LoginView, self).post(request, format=None)
 
 
 class CardView(APIView):
@@ -98,7 +110,7 @@ class CardView(APIView):
     
 class DeckView(APIView):
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     id_param = openapi.Parameter('id', openapi.IN_QUERY, description="Deck id", type=openapi.TYPE_INTEGER)
     name_param = openapi.Parameter('name', openapi.IN_QUERY, description="Deck name", type=openapi.TYPE_STRING)
@@ -106,7 +118,7 @@ class DeckView(APIView):
     page_param = openapi.Parameter('page', openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER, default=1)
 
     @swagger_auto_schema(manual_parameters=[id_param, name_param, user_id_param, page_param], operation_description="Get decks from the database",
-    responses={200: DeckSerializer(many=True), 400: "Bad request: missing query parameters", 404: "Not found: try again with different parameters"})
+    responses={200: DeckSerializer(many=True), 400: "Bad request: missing query parameters", 404: "Not found: user/deck does not exist or is private"})
     def get(self, request):
         queryset = Deck.objects.all()
 
@@ -132,16 +144,15 @@ class DeckView(APIView):
                 return Response({"message" : "Not found: user does not exist"},
                                   status=status.HTTP_404_NOT_FOUND)
 
-        if not queryset.exists():
-            return Response({"message" : "Not found: try again with different parameters"},
-                            status=status.HTTP_404_NOT_FOUND)
-
-
         # Filtering private decks
         if not request.user.is_anonymous:
             queryset = queryset.filter(Q(private=False) | Q(author=request.user))
         else:
             queryset = queryset.filter(private=False)
+
+        if not queryset.exists():
+            return Response({"message" : "Not found: deck does not exist or is private."},
+                            status=status.HTTP_404_NOT_FOUND)
 
         start = (page - 1) * 10
         end = page * 10
@@ -158,8 +169,8 @@ class DeckView(APIView):
 
         if deck_serializer.is_valid():
             deck_serializer.save(author=request.user)
-        
             return Response(deck_serializer.data, status=status.HTTP_201_CREATED) 
+
         return Response(deck_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -188,7 +199,7 @@ class DeckView(APIView):
 
 class CardsInDeckView(APIView):
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     deck_id_param = openapi.Parameter('deck_id', openapi.IN_QUERY, description="Deck id", type=openapi.TYPE_INTEGER)
 
