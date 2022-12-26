@@ -20,6 +20,7 @@ django-rest-swagger = "*"
 drf-yasg = "*"
 gunicorn = "*"
 django-environ = "*"
+whitenoise = "*"
 
 [dev-packages]
 
