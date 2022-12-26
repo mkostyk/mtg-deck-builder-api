@@ -116,7 +116,9 @@ SWAGGER_SETTINGS = {
 
 # TODO
 DATABASES = {
-
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+    }
 }
 
 
