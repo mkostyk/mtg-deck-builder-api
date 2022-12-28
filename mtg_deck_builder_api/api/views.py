@@ -138,7 +138,11 @@ class DeckView(APIView):
             queryset = queryset.filter(name__icontains=name)
         if user_id is not None:
             try:
-                user = User.objects.get(id=user_id)
+                if user_id == "-1": # why string?
+                    user = request.user
+                else:
+                    user = User.objects.get(id=user_id)
+                    
                 queryset = queryset.filter(author=user)
             except User.DoesNotExist:
                 return Response({"message" : "Not found: user does not exist"},
