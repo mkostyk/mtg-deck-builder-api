@@ -112,17 +112,17 @@ class TournamentDeckSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = TournamentDeck
-        fields = ('deck_id', 'tournament_format', 'player')
+        fields = ('id', 'deck_id', 'tournament_format', 'player')
 
 
 class TournamentArchetypeSerializer(serializers.HyperlinkedModelSerializer):
     name = serializers.CharField(max_length = 1000)
     popularity = serializers.DecimalField(max_digits=3, decimal_places=1)
-    example_deck = serializers.IntegerField()
+    example_deck_id = serializers.IntegerField()
 
     class Meta:
         model = TournamentArchetype
-        fields = ('id', 'name', 'popularity', 'example_deck')
+        fields = ('id', 'name', 'popularity', 'example_deck_id')
 
 
 class CardsInDeckSerializer(serializers.HyperlinkedModelSerializer):

@@ -8,5 +8,7 @@ admin.site.register(Legalities)
 admin.site.register(Prices)
 admin.site.register(Images)
 admin.site.register(DeckTag)
+admin.site.register(TournamentDeck)
+admin.site.register(TournamentArchetype)
 
 # Register your models here.

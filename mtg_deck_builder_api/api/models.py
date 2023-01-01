@@ -91,7 +91,7 @@ class DeckTag(models.Model):
 
 
 class TournamentDeck(models.Model):
-    deck = models.OneToOneField(Deck, on_delete=models.CASCADE, primary_key=True)
+    deck = models.OneToOneField(Deck, on_delete=models.CASCADE)
     tournament_format = models.CharField(max_length = 1000)
     player = models.CharField(max_length = 1000)
 
