@@ -67,6 +67,7 @@ class Images(models.Model):
 class Deck(models.Model):
     name = models.CharField(max_length = 1000)
     private = models.BooleanField()
+    last_update = models.DateTimeField(auto_now=True)
 
     # If user is deleted models.CASCADE ensures that every reference
     # to it in Deck table will be deleted as well.
