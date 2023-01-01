@@ -510,7 +510,12 @@ class TournamentDeckView(APIView):
     responses={200: "OK", 400: "Bad request: missing query parameters", 404: "Not found: chosen deck does not exist"})
     def delete(self, request):
         deck_id = request.query_params.get('deck_id')
-        TournamentDeck.objects.filter(id=deck_id).delete()
+
+        if deck_id is not None:
+            TournamentDeck.objects.filter(id=deck_id).delete()
+        else:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
 
         return Response({}, status=status.HTTP_200_OK)
 
