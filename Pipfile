@@ -21,6 +21,7 @@ drf-yasg = "*"
 gunicorn = "*"
 django-environ = "*"
 whitenoise = "*"
+environ = "*"
 
 [dev-packages]
 
