@@ -164,15 +164,28 @@ class DeckView(APIView):
         serializer = DeckSerializer(queryset[start:end], many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    copy_id = openapi.Parameter('copy_id', openapi.IN_QUERY, description="Deck id to copy", type=openapi.TYPE_INTEGER)
 
-    @swagger_auto_schema(request_body=DeckSerializer(), operation_description="Create a new deck",
-    responses={201: DeckSerializer, 400: "Bad request: missing query parameters"})
+    @swagger_auto_schema(request_body=DeckSerializer(), manual_parameters=[copy_id], 
+    operation_description="Create a new deck", responses={201: DeckSerializer,
+    400: "Bad request: missing query parameters", 404: "Not found: deck to copy does not exist"})
     def post(self, request):
         deck_data = JSONParser().parse(request)
         deck_serializer = DeckSerializer(data=deck_data)
+        copying_id = request.query_params.get('copy_id')
 
         if deck_serializer.is_valid():
             deck_serializer.save(author=request.user)
+            if copying_id is not None:
+                try:
+                    deck = get_deck_from_id(request.user, copying_id)
+                    cards = CardsInDeck.objects.filter(deck=deck)
+                    for card in cards:
+                        CardsInDeck.objects.create(deck=deck_serializer.instance, card=card.card)
+                except Deck.DoesNotExist:
+                    return Response({"message" : "Not found: deck to copy does not exist"},
+                                    status=status.HTTP_404_NOT_FOUND)
+
             return Response(deck_serializer.data, status=status.HTTP_201_CREATED) 
 
         return Response(deck_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -198,7 +211,6 @@ class DeckView(APIView):
 
         # TODO - error handling
         return Response({}, status=status.HTTP_200_OK)
-    
 
 
 class CardsInDeckView(APIView):
