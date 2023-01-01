@@ -88,3 +88,15 @@ class DeckTag(models.Model):
         constraints = [
             UniqueConstraint(fields=['deck', 'tag'], name='unique_tag') # TODO - lowercase/uppercase traktować tak samo?
         ]
+
+
+class TournamentDeck(models.Model):
+    deck = models.OneToOneField(Deck, on_delete=models.CASCADE, primary_key=True)
+    tournament_format = models.CharField(max_length = 1000)
+    player = models.CharField(max_length = 1000)
+
+
+class TournamentArchetype(models.Model):
+    name = models.CharField(max_length = 1000)
+    popularity = models.DecimalField(max_digits=3, decimal_places=1)
+    example_deck = models.ForeignKey(TournamentDeck, on_delete=models.CASCADE)

@@ -100,11 +100,29 @@ class DeckTagSerializer(serializers.HyperlinkedModelSerializer):
 class DeckSerializer(serializers.HyperlinkedModelSerializer):
     name = serializers.CharField(max_length = 1000)
     private = serializers.BooleanField()
-    last_update = serializers.DateTimeField()
 
     class Meta:
         model = Deck
         fields = ('id', 'name', 'private', 'last_update')
+
+
+class TournamentDeckSerializer(serializers.HyperlinkedModelSerializer):
+    tournament_format = serializers.CharField(max_length = 1000)
+    player = serializers.CharField(max_length = 1000)
+
+    class Meta:
+        model = TournamentDeck
+        fields = ('deck_id', 'tournament_format', 'player')
+
+
+class TournamentArchetypeSerializer(serializers.HyperlinkedModelSerializer):
+    name = serializers.CharField(max_length = 1000)
+    popularity = serializers.DecimalField(max_digits=3, decimal_places=1)
+    example_deck = serializers.IntegerField()
+
+    class Meta:
+        model = TournamentArchetype
+        fields = ('id', 'name', 'popularity', 'example_deck')
 
 
 class CardsInDeckSerializer(serializers.HyperlinkedModelSerializer):
