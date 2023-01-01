@@ -18,6 +18,8 @@ from django.db.models import Q
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+from datetime import datetime
+
 from .serializers import *
 from .models import *
 # TODO - single objects instead of querysets
@@ -264,6 +266,8 @@ class CardsInDeckView(APIView):
 
         if card_serializer.is_valid():
             card_serializer.save(deck=deck, card=card)  # TODO - testing
+            deck.last_update = datetime.now()
+            deck.save()
             return Response(card_serializer.data, status=status.HTTP_201_CREATED) 
 
         return Response(card_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -287,6 +291,10 @@ class CardsInDeckView(APIView):
             else:
                 # Delete a single card from a deck
                 CardsInDeck.objects.get(id=card_id).delete()
+
+            deck.last_update = datetime.now()
+            deck.save()
+        
         else:
             return Response({"message" : "Bad request: you are not this deck's author"},
                             status=status.HTTP_400_BAD_REQUEST)

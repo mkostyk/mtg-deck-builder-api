@@ -100,10 +100,11 @@ class DeckTagSerializer(serializers.HyperlinkedModelSerializer):
 class DeckSerializer(serializers.HyperlinkedModelSerializer):
     name = serializers.CharField(max_length = 1000)
     private = serializers.BooleanField()
+    last_update = serializers.DateTimeField()
 
     class Meta:
         model = Deck
-        fields = ('id', 'name', 'private')
+        fields = ('id', 'name', 'private', 'last_update')
 
 
 class CardsInDeckSerializer(serializers.HyperlinkedModelSerializer):
