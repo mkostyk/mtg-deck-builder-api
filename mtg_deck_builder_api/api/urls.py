@@ -35,6 +35,8 @@ urlpatterns = [
    path('legalities/', views.LegalitiesView.as_view()),
    path('images/', views.ImagesView.as_view()),
    path('tags/', views.DeckTagView.as_view()),
+   path('tournamentDecks/', views.TournamentDeckView.as_view()),
+   path('tournamentArchetypes/', views.TournamentArchetypeView.as_view()),
    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 
    path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

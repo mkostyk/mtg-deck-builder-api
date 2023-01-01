@@ -22,10 +22,12 @@ from datetime import datetime
 
 from .serializers import *
 from .models import *
-# TODO - single objects instead of querysets
+from .permissions import *
 # TODO - many to many fields
 # TODO - examples in docs, lepsze opisy
-# TODO - request body w delete?
+# TODO - splitup views.py into multiple files
+
+PAGE_SIZE = 12
 
 def get_deck_from_id(user, deck_id):
     if not user.is_anonymous:
@@ -72,6 +74,7 @@ class LoginView(KnoxLoginView):
 class CardView(APIView):
     id_param = openapi.Parameter('id', openapi.IN_QUERY, description="Card id", type=openapi.TYPE_INTEGER)
     name_param = openapi.Parameter('name', openapi.IN_QUERY, description="Card name", type=openapi.TYPE_STRING)
+    exact_name_param = openapi.Parameter('exact_name', openapi.IN_QUERY, description="Card name", type=openapi.TYPE_STRING)
     type_param = openapi.Parameter('type', openapi.IN_QUERY, description="Card type", type=openapi.TYPE_STRING)
     page_param = openapi.Parameter('page', openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER, default=1)
 
@@ -84,8 +87,9 @@ class CardView(APIView):
         name = request.query_params.get('name')
         type = request.query_params.get('type')
         page = get_page(request.query_params.get('page'))
+        exact_name = request.query_params.get('exact_name')
 
-        if id is None and name is None and type is None or page < 1:
+        if id is None and name is None and type is None and exact_name is None or page < 1:
             return Response({"message" : "Bad request: missing/incorrect query parameters"}, 
                               status=status.HTTP_400_BAD_REQUEST)
 
@@ -95,6 +99,8 @@ class CardView(APIView):
             queryset = queryset.filter(card_name__icontains=name)
         if type is not None:
             queryset = queryset.filter(type_line__icontains=type)
+        if exact_name is not None:
+            queryset = queryset.filter(card_name__iexact=exact_name)
 
         if not queryset.exists():
             return Response({"message" : "Not found: try again with different parameters"},
@@ -102,8 +108,8 @@ class CardView(APIView):
 
         # TODO - ogarnąć to
         #queryset = Card.objects.raw('SELECT * FROM cards WHERE card_name = %s', [name])
-        start = (page - 1) * 10
-        end = page * 10
+        start = (page - 1) * PAGE_SIZE
+        end = page * PAGE_SIZE
 
         serializer = CardSerializer(queryset[start:end], many=True)
         
@@ -160,8 +166,8 @@ class DeckView(APIView):
             return Response({"message" : "Not found: deck does not exist or is private."},
                             status=status.HTTP_404_NOT_FOUND)
 
-        start = (page - 1) * 10
-        end = page * 10
+        start = (page - 1) * PAGE_SIZE
+        end = page * PAGE_SIZE
         
         serializer = DeckSerializer(queryset[start:end], many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -332,7 +338,7 @@ class PricesView(APIView):
             return Response({"message" : "Not found: try again with different parameters"},
                             status=status.HTTP_404_NOT_FOUND)
             
-        serializer = PricesSerializer(queryset[:10], many=True)
+        serializer = PricesSerializer(queryset[:PAGE_SIZE], many=True) # TODO - pagination
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -380,7 +386,9 @@ class ImagesView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
         
 
-class DeckTagView(APIView):
+class DeckTagView(APIView):    
+    authentication_classes = [TokenAuthentication]
+
     deck_id_param = openapi.Parameter('id', openapi.IN_QUERY, description="Deck id", type=openapi.TYPE_INTEGER)
     tag_param = openapi.Parameter('tag', openapi.IN_QUERY, description="Tag", type=openapi.TYPE_STRING)
 
@@ -454,3 +462,128 @@ class DeckTagView(APIView):
             DeckTag.objects.filter(deck=deck, tag=tag).delete()
 
         return Response({}, status=status.HTTP_200_OK)
+
+
+class TournamentDeckView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrReadOnly]
+
+    deck_id_param = openapi.Parameter('deck_id', openapi.IN_QUERY, description="Deck id", type=openapi.TYPE_INTEGER)
+
+    @swagger_auto_schema(manual_parameters=[deck_id_param], operation_description="Get tournament decks from the database",
+    responses={200: TournamentDeckSerializer(many=True), 400: "Bad request: missing query parameters", 404: "Not found: chosen deck does not exist"})
+    def get(self, request):
+        tournament_deck_id = request.query_params.get('deck_id')
+
+        if tournament_deck_id is not None:
+            try:
+                queryset = TournamentDeck.objects.filter(id=tournament_deck_id)
+            except Deck.DoesNotExist:
+                return Response({"message" : "Not found: chosen deck does not exist"},
+                                status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = TournamentDeckSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+    @swagger_auto_schema(request_body=TournamentDeckSerializer(), operation_description="Add deck as a tournament deck",
+    responses={201: TournamentDeckSerializer, 400: "Bad request: missing query parameters", 404: "Not found: chosen deck does not exist or you are not this deck's author"})
+    def post(self, request):
+        tournament_deck_data = JSONParser().parse(request)
+        tournament_deck_serializer = TournamentDeckSerializer(data=tournament_deck_data)
+
+        try:
+            deck = Deck.objects.get(id=tournament_deck_data['deck_id'])
+        except Deck.DoesNotExist:
+            return Response({"message" : "Not found: chosen deck does not exist or you are not this deck's author"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        if tournament_deck_serializer.is_valid():
+            tournament_deck_serializer.save(deck=deck)
+            return Response(tournament_deck_serializer.data, status=status.HTTP_201_CREATED)
+
+
+    @swagger_auto_schema(manual_parameters=[deck_id_param], operation_description="Delete tournament deck from the database",
+    responses={200: "OK", 400: "Bad request: missing query parameters", 404: "Not found: chosen deck does not exist"})
+    def delete(self, request):
+        deck_id = request.query_params.get('deck_id')
+
+        if deck_id is not None:
+            TournamentDeck.objects.filter(id=deck_id).delete()
+        else:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({}, status=status.HTTP_200_OK)
+
+
+class TournamentArchetypeView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsStaffOrReadOnly]
+
+    archetype_name_param = openapi.Parameter('archetype', openapi.IN_QUERY, description="Archetype name", type=openapi.TYPE_STRING)
+    archetype_id_param = openapi.Parameter('archetype_id', openapi.IN_QUERY, description="Archetype id", type=openapi.TYPE_INTEGER)
+
+    @swagger_auto_schema(manual_parameters=[archetype_name_param, archetype_id_param],
+    operation_description="Get tournament archetypes from the database",
+    responses={200: TournamentArchetypeSerializer(many=True), 400: "Bad request: missing query parameters"})
+    def get(self, request):
+        archetype_name = request.query_params.get('archetype')
+        archetype_id = request.query_params.get('archetype_id')
+        queryset = TournamentArchetype.objects.all()
+
+        if archetype_id is None and archetype_name is None:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
+        if archetype_name is not None:
+            queryset = queryset.filter(name=archetype_name)
+        if archetype_id is not None:
+            queryset = queryset.filter(id=archetype_id)
+
+        if not queryset.exists():
+            return Response({"message" : "Not found: chosen archetype does not exist"}, 
+                              status=status.HTTP_404_NOT_FOUND)
+
+        serializer = TournamentArchetypeSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+    @swagger_auto_schema(request_body=TournamentArchetypeSerializer(), operation_description="Add tournament archetype to the database. Available only for admins.",
+    responses={201: TournamentArchetypeSerializer, 400: "Bad request: missing query parameters"})    
+    def post(self, request):
+        tournament_archetype_data = JSONParser().parse(request)
+        tournament_archetype_serializer = TournamentArchetypeSerializer(data=tournament_archetype_data)
+
+        try:
+            deck = TournamentDeck.objects.get(id=tournament_archetype_data['example_deck_id'])
+        except TournamentDeck.DoesNotExist:
+            return Response({"message" : "Not found: chosen deck does not exist."},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        if tournament_archetype_serializer.is_valid():
+            print(tournament_archetype_serializer)
+            tournament_archetype_serializer.save(example_deck=deck)
+            return Response(tournament_archetype_serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response({"message" : "Bad request: data is not valid"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
+
+    @swagger_auto_schema(manual_parameters=[archetype_id_param], operation_description="Delete tournament archetype from the database",
+    responses={200: "OK", 400: "Bad request: missing query parameters"})
+    def delete(self, request):
+        archetype_id = request.query_params.get('archetype_id')
+
+        if archetype_id is not None:
+            TournamentArchetype.objects.filter(id=archetype_id).delete()
+        else:
+            return Response({"message" : "Bad request: missing query parameters"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({}, status=status.HTTP_200_OK)
+
+# TODO - delete tournament archetype from database
