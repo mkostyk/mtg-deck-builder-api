@@ -473,12 +473,11 @@ class TournamentDeckView(APIView):
     @swagger_auto_schema(manual_parameters=[deck_id_param], operation_description="Get tournament decks from the database",
     responses={200: TournamentDeckSerializer(many=True), 400: "Bad request: missing query parameters", 404: "Not found: chosen deck does not exist"})
     def get(self, request):
-        deck_id = request.query_params.get('deck_id')
+        tournament_deck_id = request.query_params.get('deck_id')
 
-        if deck_id is not None:
+        if tournament_deck_id is not None:
             try:
-                deck = get_deck_from_id(request.user, deck_id)
-                tournament_decks = TournamentDeck.objects.filter(deck=deck)
+                queryset = TournamentDeck.objects.filter(id=tournament_deck_id)
             except Deck.DoesNotExist:
                 return Response({"message" : "Not found: chosen deck does not exist"},
                                 status=status.HTTP_404_NOT_FOUND)
@@ -486,11 +485,11 @@ class TournamentDeckView(APIView):
             return Response({"message" : "Bad request: missing query parameters"}, 
                               status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = TournamentDeckSerializer(tournament_decks, many=True)
+        serializer = TournamentDeckSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-    @swagger_auto_schema(request_body=TournamentDeckSerializer(), operation_description="Add tournament deck to the database",
+    @swagger_auto_schema(request_body=TournamentDeckSerializer(), operation_description="Add deck as a tournament deck",
     responses={201: TournamentDeckSerializer, 400: "Bad request: missing query parameters", 404: "Not found: chosen deck does not exist or you are not this deck's author"})
     def post(self, request):
         tournament_deck_data = JSONParser().parse(request)
@@ -507,18 +506,11 @@ class TournamentDeckView(APIView):
             return Response(tournament_deck_serializer.data, status=status.HTTP_201_CREATED)
 
 
-    @swagger_auto_schema(manual_parameteres=[deck_id_param], operation_description="Delete tournament deck from the database",
+    @swagger_auto_schema(manual_parameters=[deck_id_param], operation_description="Delete tournament deck from the database",
     responses={200: "OK", 400: "Bad request: missing query parameters", 404: "Not found: chosen deck does not exist"})
     def delete(self, request):
         deck_id = request.query_params.get('deck_id')
-
-        try:
-            deck = get_deck_from_id(request.user, deck_id)
-        except Deck.DoesNotExist:
-            return Response({"message" : "Not found: chosen deck does not exist"},
-                            status=status.HTTP_404_NOT_FOUND)
-
-        TournamentDeck.objects.filter(deck=deck).delete()
+        TournamentDeck.objects.filter(id=deck_id).delete()
 
         return Response({}, status=status.HTTP_200_OK)
 
@@ -576,7 +568,7 @@ class TournamentArchetypeView(APIView):
                               status=status.HTTP_400_BAD_REQUEST)
 
 
-    @swagger_auto_schema(manual_parameteres=[archetype_id_param], operation_description="Delete tournament archetype from the database",
+    @swagger_auto_schema(manual_parameters=[archetype_id_param], operation_description="Delete tournament archetype from the database",
     responses={200: "OK", 400: "Bad request: missing query parameters"})
     def delete(self, request):
         archetype_id = request.query_params.get('archetype_id')

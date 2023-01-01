@@ -107,6 +107,7 @@ class DeckSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class TournamentDeckSerializer(serializers.HyperlinkedModelSerializer):
+    deck_id = serializers.IntegerField()
     tournament_format = serializers.CharField(max_length = 1000)
     player = serializers.CharField(max_length = 1000)
 
