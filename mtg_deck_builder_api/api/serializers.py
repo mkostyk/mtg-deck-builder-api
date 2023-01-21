@@ -103,7 +103,7 @@ class DeckSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Deck
-        fields = ('id', 'name', 'private', 'last_update')
+        fields = ('id', 'name', 'private', 'last_update', 'votes')
 
 
 class TournamentDeckSerializer(serializers.HyperlinkedModelSerializer):
@@ -202,3 +202,11 @@ class SideboardSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Sideboard
         fields = ('id', 'deck_id', 'card_id')
+
+class VoteSerializer(serializers.HyperlinkedModelSerializer):
+    deck_id = serializers.IntegerField()
+    value = serializers.IntegerField()
+
+    class Meta:
+        model = Vote
+        fields = ('id', 'deck_id', 'user_id', 'value')

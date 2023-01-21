@@ -37,6 +37,7 @@ urlpatterns = [
    path('legalities/', LegalitiesView.as_view()),
    path('images/', ImagesView.as_view()),
    path('tags/', DeckTagView.as_view()),
+   path('votes/', VoteView.as_view()),
    path('tournamentDecks/', TournamentDeckView.as_view()),
    path('tournamentArchetypes/', TournamentArchetypeView.as_view()),
    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
