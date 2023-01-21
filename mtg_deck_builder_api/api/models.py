@@ -98,5 +98,10 @@ class TournamentDeck(models.Model):
 
 class TournamentArchetype(models.Model):
     name = models.CharField(max_length = 1000)
-    popularity = models.DecimalField(max_digits=3, decimal_places=1)
+    popularity = models.DecimalField(max_digits=4, decimal_places=1)
     example_deck = models.ForeignKey(TournamentDeck, on_delete=models.CASCADE)
+
+
+class Sideboard(models.Model):
+    deck = models.ForeignKey(Deck, on_delete=models.CASCADE)
+    card = models.ForeignKey(Card, on_delete=models.CASCADE)
