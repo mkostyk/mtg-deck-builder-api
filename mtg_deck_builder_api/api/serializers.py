@@ -194,3 +194,11 @@ class ResponseTokenSerializer(serializers.Serializer):
 
     class Meta:
         fields = ('expiry', 'token')
+
+class SideboardSerializer(serializers.HyperlinkedModelSerializer):
+    deck_id = serializers.IntegerField()
+    card_id = serializers.IntegerField()
+
+    class Meta:
+        model = Sideboard
+        fields = ('id', 'deck_id', 'card_id')

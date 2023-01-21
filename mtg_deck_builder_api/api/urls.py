@@ -1,14 +1,12 @@
 from django.urls import include, path, re_path
 from rest_framework import routers
 from knox import views as knox_views
-from . import views_test
+from . import views
 from rest_framework.documentation import include_docs_urls
 from rest_framework.schemas import get_schema_view
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
-
-import views
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -25,21 +23,21 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-   path('auth/register/', views_test.RegisterView.as_view()),
-   path('auth/login/', views_test.LoginView.as_view(), name='knox_login'),
+   path('auth/register/', views.RegisterView.as_view()),
+   path('auth/login/', views.LoginView.as_view(), name='knox_login'),
    path('auth/logout/', knox_views.LogoutView.as_view(), name='knox_logout'),
    path('auth/logoutall/', knox_views.LogoutAllView.as_view(), name='knox_logoutall'),
     
-   path('cards/', views_test.CardView.as_view()),
-   path('decks/', views_test.DeckView.as_view()),
-   path('cardsInDeck/', views_test.CardsInDeckView.as_view()),
-   path('sideboard/', views_test.SideboardView.as_view()),
-   path('prices/', views_test.PricesView.as_view()),
-   path('legalities/', views_test.LegalitiesView.as_view()),
-   path('images/', views_test.ImagesView.as_view()),
-   path('tags/', views_test.DeckTagView.as_view()),
-   path('tournamentDecks/', views_test.TournamentDeckView.as_view()),
-   path('tournamentArchetypes/', views_test.TournamentArchetypeView.as_view()),
+   path('cards/', views.CardView.as_view()),
+   path('decks/', views.DeckView.as_view()),
+   path('cardsInDeck/', views.CardsInDeckView.as_view()),
+   path('sideboard/', views.SideboardView.as_view()),
+   path('prices/', views.PricesView.as_view()),
+   path('legalities/', views.LegalitiesView.as_view()),
+   path('images/', views.ImagesView.as_view()),
+   path('tags/', views.DeckTagView.as_view()),
+   path('tournamentDecks/', views.TournamentDeckView.as_view()),
+   path('tournamentArchetypes/', views.TournamentArchetypeView.as_view()),
    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 
    path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
