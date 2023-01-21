@@ -45,7 +45,7 @@ class DeckView(APIView):
             queryset = queryset.filter(name__icontains=name)
         if user_id is not None:
             try:
-                if user_id == "-1": # why string?
+                if user_id == "-1" and not request.user.is_anonymous: # why string?
                     user = request.user
                 else:
                     user = User.objects.get(id=user_id)
