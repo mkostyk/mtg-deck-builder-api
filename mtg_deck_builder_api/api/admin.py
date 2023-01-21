@@ -4,6 +4,7 @@ from .models import *
 admin.site.register(Card)
 admin.site.register(Deck)
 admin.site.register(CardsInDeck)
+admin.site.register(Vote)
 admin.site.register(Legalities)
 admin.site.register(Sideboard)
 admin.site.register(Prices)

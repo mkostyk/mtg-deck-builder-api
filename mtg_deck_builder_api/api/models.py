@@ -68,6 +68,7 @@ class Deck(models.Model):
     name = models.CharField(max_length = 1000)
     private = models.BooleanField()
     last_update = models.DateTimeField(auto_now=True)
+    votes = models.IntegerField(default=0)
 
     # If user is deleted models.CASCADE ensures that every reference
     # to it in Deck table will be deleted as well.
@@ -105,3 +106,14 @@ class TournamentArchetype(models.Model):
 class Sideboard(models.Model):
     deck = models.ForeignKey(Deck, on_delete=models.CASCADE)
     card = models.ForeignKey(Card, on_delete=models.CASCADE)
+
+
+class Vote(models.Model):
+    deck = models.ForeignKey(Deck, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    value = models.IntegerField()
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=['deck', 'user'], name='unique_vote')
+        ]

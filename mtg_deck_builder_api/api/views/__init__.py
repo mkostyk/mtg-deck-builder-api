@@ -1,3 +1,4 @@
 __all__ = ['CardView', 'RegisterView', 'LoginView', 'DeckView', 'CardsInDeckView',
            'SideboardView', 'PricesView', 'LegalitiesView', 'ImagesView', 
-           'DeckTagView', 'TournamentDeckView', 'TournamentArchetypeView']
+           'DeckTagView', 'TournamentDeckView', 'TournamentArchetypeView', 
+           'VoteView']
