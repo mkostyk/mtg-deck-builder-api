@@ -35,6 +35,8 @@ urlpatterns = [
    path('sideboard/', SideboardView.as_view()),
    path('prices/', PricesView.as_view()),
    path('legalities/', LegalitiesView.as_view()),
+   path('deckLegality/', DeckLegalityView.as_view()),
+   path('privacy/', ChangePrivacyView.as_view()),
    path('images/', ImagesView.as_view()),
    path('tags/', DeckTagView.as_view()),
    path('votes/', VoteView.as_view()),
