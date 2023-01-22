@@ -3,6 +3,7 @@ from .models import Deck
 
 PAGE_SIZE = 12
 FORMATS = ["Standard", "Alchemy", "Modern", "Legacy", "Vintage", "Commander", "Pauper", "Pioneer", "Explorer", "Brawl", "Historic", "Penny"]
+BASIC_LANDS = ["Plains", "Island", "Swamp", "Mountain", "Forest"]
 
 def get_deck_from_id(user, deck_id):
     if not user.is_anonymous:

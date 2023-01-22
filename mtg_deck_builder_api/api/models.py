@@ -13,7 +13,7 @@ class Card(models.Model):
     power = models.CharField(max_length = 5, null=True, blank=True)
     toughness = models.CharField(max_length = 5, null=True, blank=True)
     type_line = models.TextField(null=True, blank=True)
-    card_text = models.TextField(null=True, blank=True)
+    card_text = models.TextField(null=False, blank=False)
     color_identity = models.CharField(max_length = 20, null=True, blank=True)
     ruling_uri = models.CharField(max_length = 100, null=True, blank=True)
     rarity = models.CharField(max_length = 20, null=True, blank=True)
