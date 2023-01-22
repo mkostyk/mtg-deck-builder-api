@@ -67,6 +67,7 @@ class Images(models.Model):
 class Deck(models.Model):
     name = models.CharField(max_length = 1000)
     private = models.BooleanField()
+    format = models.CharField(max_length = 100)
     last_update = models.DateTimeField(auto_now=True)
     votes = models.IntegerField(default=0)
 

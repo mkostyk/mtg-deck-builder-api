@@ -97,13 +97,20 @@ class DeckTagSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('deck_id', 'tag')
 
 
-class DeckSerializer(serializers.HyperlinkedModelSerializer):
+class DeckPostRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Deck
+        fields = ('name', 'private', 'format')
+
+
+class DeckSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length = 1000)
+    format = serializers.CharField(max_length = 100)
     private = serializers.BooleanField()
 
     class Meta:
         model = Deck
-        fields = ('id', 'name', 'private', 'last_update', 'votes')
+        fields = ('id', 'name', 'private', 'format', 'last_update', 'votes', 'author')
 
 
 class TournamentDeckSerializer(serializers.HyperlinkedModelSerializer):
