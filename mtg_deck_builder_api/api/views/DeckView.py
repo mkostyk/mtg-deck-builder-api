@@ -12,7 +12,7 @@ from drf_yasg import openapi
 
 from knox.auth import TokenAuthentication
 
-from ..serializers import DeckSerializer
+from ..serializers import DeckSerializer, DeckPostRequestSerializer
 from ..models import Deck, CardsInDeck
 from ..utils import *
 
@@ -74,16 +74,24 @@ class DeckView(APIView):
 
     copy_id = openapi.Parameter('copy_id', openapi.IN_QUERY, description="Deck id to copy", type=openapi.TYPE_INTEGER)
 
-    @swagger_auto_schema(request_body=DeckSerializer(), manual_parameters=[copy_id], 
+    @swagger_auto_schema(request_body=DeckPostRequestSerializer(), manual_parameters=[copy_id], 
     operation_description="Create a new deck", responses={201: DeckSerializer,
     400: "Bad request: missing query parameters", 404: "Not found: deck to copy does not exist"})
     def post(self, request):
         deck_data = JSONParser().parse(request)
+        deck_data['author'] = request.user.id
+        deck_data['votes'] = 0
+
+        if deck_data['format'] not in FORMATS:
+            return Response({"message" : "Bad request: invalid deck format"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
         deck_serializer = DeckSerializer(data=deck_data)
+
         copying_id = request.query_params.get('copy_id')
 
         if deck_serializer.is_valid():
-            deck_serializer.save(author=request.user)
+            deck_serializer.save()
             if copying_id is not None:
                 try:
                     deck = get_deck_from_id(request.user, copying_id)
