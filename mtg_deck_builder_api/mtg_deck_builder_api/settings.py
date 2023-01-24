@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
 import environ
 
 # Initialise environment variables
@@ -99,6 +100,10 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'
 }
 
+REST_KNOX = {
+    'TOKEN_TTL': timedelta(hours=72), 
+    'AUTO_REFRESH': True
+}
 
 SWAGGER_SETTINGS = {
     "DEFAULT_MODEL_RENDERING": "example",
