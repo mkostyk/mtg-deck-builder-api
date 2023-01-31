@@ -19,6 +19,7 @@ class CardsInDeckView(APIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     deck_id_param = openapi.Parameter('deck_id', openapi.IN_QUERY, description="Deck id", type=openapi.TYPE_INTEGER)
+    id_param = openapi.Parameter('id', openapi.IN_QUERY, description="id", type=openapi.TYPE_INTEGER)
 
     @swagger_auto_schema(manual_parameters=[deck_id_param], operation_description="Get cards in deck from the database",
     responses={200: CardsInDeckSerializer(many=True), 400: "Bad request: you have to specify deck id", 404: "Not found: chosen deck does not exist or is not public"})
@@ -72,10 +73,10 @@ class CardsInDeckView(APIView):
         return Response(card_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     
-    @swagger_auto_schema(manual_parameters=[deck_id_param], operation_description="Delete cards from a deck",
+    @swagger_auto_schema(manual_parameters=[id_param], operation_description="Delete cards from a deck",
     responses={200: "OK", 400: "Bad request: missing query parameters or you are not this deck's author", 404: "Not found: chosen card does not exist"})
     def delete(self, request):
-        card_id = request.query_params.get('card_id')
+        card_id = request.query_params.get('id')
         
         try:
             deck = CardsInDeck.objects.get(id=card_id).deck
