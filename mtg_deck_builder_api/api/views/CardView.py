@@ -32,7 +32,7 @@ class CardView(APIView):
         exact_name = request.query_params.get('exact_name')
         color_identity = request.query_params.get('color_identity')
         exact_color_identity = request.query_params.get('exact_color_identity')
-        format_name = request.query_params.get('format_name').lower()
+        format_name = request.query_params.get('format_name')
 
         params_list = [id, name, type, exact_name, color_identity, exact_color_identity, format_name]
 
@@ -53,6 +53,7 @@ class CardView(APIView):
         if exact_color_identity is not None:
             queryset = queryset.filter(color_identity__iexact=exact_color_identity)
         if format_name is not None:
+            format_name = format_name.lower()
             filter_params = {format_name: ['legal', 'restricted']}
             filter = or_filter(filter_params)
             format_queryset = Legalities.objects.filter(filter)
