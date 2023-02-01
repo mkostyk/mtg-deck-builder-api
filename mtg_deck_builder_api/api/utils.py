@@ -42,3 +42,13 @@ def or_filter_from_dict(filter_dict):
             my_filter |= Q(**{column:item})
 
     return my_filter
+
+
+def and_filter_from_dict(filter_dict):
+    my_filter = Q()
+
+    for column in filter_dict:
+        for item in filter_dict[column]:
+            my_filter &= Q(**{column:item})
+
+    return my_filter

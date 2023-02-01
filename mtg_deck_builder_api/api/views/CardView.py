@@ -5,7 +5,7 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-from ..utils import get_page, PAGE_SIZE, reverse_case_insensitive_contains as ricontains, or_filter_from_dict as or_filter
+from ..utils import get_page, PAGE_SIZE, reverse_case_insensitive_contains as ricontains, or_filter_from_dict as or_filter, and_filter_from_dict as and_filter
 from ..models import Card, Legalities
 from ..serializers import CardSerializer
 
@@ -47,7 +47,10 @@ class CardView(APIView):
         if exact_name is not None:
             queryset = queryset.filter(card_name__iexact=exact_name)
         if type is not None:
-            queryset = queryset.filter(type_line__icontains=type)
+            type_filter_dict = {"type_line__icontains": type.split(" ")}
+            type_filter = and_filter(type_filter_dict)
+
+            queryset = queryset.filter(type_filter)
         if color_identity is not None:
             queryset = ricontains(queryset, "color_identity", color_identity)
         if exact_color_identity is not None:
