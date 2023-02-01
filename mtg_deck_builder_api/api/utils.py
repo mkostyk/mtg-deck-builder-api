@@ -1,5 +1,6 @@
 from django.db.models import Q
 from .models import Deck
+from django.db.models import F, Value, CharField
 
 PAGE_SIZE = 12
 FORMATS = ["Standard", "Alchemy", "Modern", "Legacy", "Vintage", "Commander", "Pauper", "Pioneer", "Explorer", "Brawl", "Historic", "Penny"]
@@ -25,3 +26,19 @@ def get_page(page):
     else:
         page = int(page)
     return page
+
+@staticmethod
+def reverse_case_insensitive_contains(queryset, search_field_name: str, search_field_value: str):
+    return queryset \
+        .annotate(search_field=Value(search_field_value, output_field=CharField())) \
+        .filter(search_field__icontains=F(search_field_name))
+
+
+def or_filter_from_dict(filter_dict):
+    my_filter = Q()
+
+    for column in filter_dict:
+        for item in filter_dict[column]:
+            my_filter |= Q(**{column:item})
+
+    return my_filter
