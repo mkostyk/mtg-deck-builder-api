@@ -19,8 +19,9 @@ class TokenView(APIView):
             return Response({"message" : "Bad request: missing/incorrect data"},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        token_key = token[0:8]
         try:
-            user = AuthToken.objects.get(digest=token).user
+            user = AuthToken.objects.get(token_key=token_key).user
         except AuthToken.DoesNotExist:
             return Response({"message" : "Not found: token does not exist or is not valid"},
                             status=status.HTTP_404_NOT_FOUND)
