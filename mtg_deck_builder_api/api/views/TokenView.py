@@ -25,7 +25,7 @@ class TokenView(APIView):
             return Response({"message" : "Not found: token does not exist or is not valid"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        return Response({"message" : "Token is valid"})
+        return Response({"user_id" : user.id})
 
 def as_view():
     return TokenView.as_view()
