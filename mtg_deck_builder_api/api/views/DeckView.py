@@ -61,6 +61,7 @@ class DeckView(APIView):
                                   status=status.HTTP_404_NOT_FOUND)
             
         if format_name is not None:
+            format_name = format_name.lower()
             queryset = queryset.filter(format=format_name)
 
         # Filtering private decks
