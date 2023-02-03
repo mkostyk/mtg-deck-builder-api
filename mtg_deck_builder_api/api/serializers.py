@@ -35,6 +35,7 @@ class CardResultSerializer(CardSerializer):
     decks_count = serializers.IntegerField()
 
     class Meta:
+        model = Card
         fields = CardSerializer.Meta.fields + ('card_count', 'decks_count')
 
 class LegalitiesSerializer(serializers.HyperlinkedModelSerializer):

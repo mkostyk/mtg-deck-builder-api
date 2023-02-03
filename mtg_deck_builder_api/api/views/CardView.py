@@ -56,9 +56,9 @@ class CardView(APIView):
             queryset = ricontains(queryset, "color_identity", color_identity)
         if exact_color_identity is not None:
             queryset = queryset.filter(color_identity__iexact=exact_color_identity)
-        if format_name is not None:
+        if format_name is not None and format_name != "":
             # TODO - optymalizacja
-            format_name = format_name.lower()
+            format_name = format_name.capitalize()
             filter_params = {format_name: ['legal', 'restricted']}
             filter = or_filter(filter_params)
             format_queryset = Legalities.objects.filter(filter)
