@@ -29,6 +29,13 @@ class CardSerializer(serializers.HyperlinkedModelSerializer):
                   'cmc', 'loyalty', 'power', 'toughness', 'type_line',
                   'card_text', 'color_identity', 'ruling_uri', 'rarity',
                   'flavor_text', 'artist')
+        
+class CardResultSerializer(CardSerializer):
+    card_count = serializers.IntegerField()
+    decks_count = serializers.IntegerField()
+
+    class Meta:
+        fields = CardSerializer.Meta.fields + ('card_count', 'decks_count')
 
 class LegalitiesSerializer(serializers.HyperlinkedModelSerializer):
     card_id = serializers.IntegerField()

@@ -1,5 +1,5 @@
 from django.db.models import Q
-from .models import Deck
+from .models import Deck, CardsInDeck
 from django.db.models import F, Value, CharField
 
 PAGE_SIZE = 12
@@ -52,3 +52,13 @@ def and_filter_from_dict(filter_dict):
             my_filter &= Q(**{column:item})
 
     return my_filter
+
+
+def count_card_occurrences(card_id):
+    cards = CardsInDeck.objects.filter(card_id=card_id)
+    decks = cards.values('deck').distinct()
+    
+    return {
+        'card_count': cards.count(),
+        'decks_count': decks.count()
+    }

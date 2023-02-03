@@ -5,9 +5,10 @@ from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-from ..utils import get_page, PAGE_SIZE, reverse_case_insensitive_contains as ricontains, or_filter_from_dict as or_filter, and_filter_from_dict as and_filter
+from ..utils import get_page, PAGE_SIZE, reverse_case_insensitive_contains as ricontains, \
+or_filter_from_dict as or_filter, and_filter_from_dict as and_filter, count_card_occurrences
 from ..models import Card, Legalities
-from ..serializers import CardSerializer
+from ..serializers import CardSerializer, CardResultSerializer
 
 
 class CardView(APIView):
@@ -21,7 +22,7 @@ class CardView(APIView):
     format_name_param = openapi.Parameter('format_name', openapi.IN_QUERY, description="Format name", type=openapi.TYPE_STRING)
 
     @swagger_auto_schema(manual_parameters=[id_param, name_param, type_param, page_param, color_identity_param, exact_color_identity_param, format_name_param], operation_description="Get cards from the database",
-    responses={200: CardSerializer(many=True), 400: "Bad request: missing/incorrect query parameters", 404: "Not found: try again with different parameters"})
+    responses={200: CardResultSerializer(many=True), 400: "Bad request: missing/incorrect query parameters", 404: "Not found: try again with different parameters"})
     def get(self, request):
         queryset = Card.objects.all()
 
@@ -56,6 +57,7 @@ class CardView(APIView):
         if exact_color_identity is not None:
             queryset = queryset.filter(color_identity__iexact=exact_color_identity)
         if format_name is not None:
+            # TODO - optymalizacja
             format_name = format_name.lower()
             filter_params = {format_name: ['legal', 'restricted']}
             filter = or_filter(filter_params)
@@ -75,8 +77,14 @@ class CardView(APIView):
         #queryset = Card.objects.raw('SELECT * FROM cards WHERE card_name = %s', [name])
         start = (page - 1) * PAGE_SIZE
         end = page * PAGE_SIZE
-
+        queryset = queryset.order_by('card_name')
+        
         serializer = CardSerializer(queryset[start:end], many=True)
+
+        for card in serializer.data:
+            counts = count_card_occurrences(card['id'])
+            card['card_count'] = counts.get('card_count', 0)
+            card['decks_count'] = counts.get('decks_count', 0)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
 

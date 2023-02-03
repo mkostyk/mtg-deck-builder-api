@@ -24,8 +24,9 @@ class DeckView(APIView):
     name_param = openapi.Parameter('name', openapi.IN_QUERY, description="Deck name", type=openapi.TYPE_STRING)
     user_id_param = openapi.Parameter('user_id', openapi.IN_QUERY, description="User id", type=openapi.TYPE_INTEGER)
     page_param = openapi.Parameter('page', openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER, default=1)
+    format_param = openapi.Parameter('format_name', openapi.IN_QUERY, description="Format name", type=openapi.TYPE_STRING)
 
-    @swagger_auto_schema(manual_parameters=[id_param, name_param, user_id_param, page_param], operation_description="Get decks from the database",
+    @swagger_auto_schema(manual_parameters=[id_param, name_param, user_id_param, page_param, format_param], operation_description="Get decks from the database",
     responses={200: DeckSerializer(many=True), 400: "Bad request: missing query parameters", 404: "Not found: user/deck does not exist or is private"})
     def get(self, request):
         queryset = Deck.objects.all()
@@ -34,8 +35,11 @@ class DeckView(APIView):
         name = request.query_params.get('name')
         user_id = request.query_params.get('user_id')
         page = get_page(request.query_params.get('page'))
+        format_name = request.query_params.get('format_name')
 
-        if id is None and name is None and user_id is None:
+        params_list = [id, name, user_id, format_name]
+
+        if not any(params_list) or page < 1:
             return Response({"message" : "Bad request: missing query parameters"}, 
                               status=status.HTTP_400_BAD_REQUEST)
 
@@ -55,6 +59,9 @@ class DeckView(APIView):
             except User.DoesNotExist:
                 return Response({"message" : "Not found: user does not exist"},
                                   status=status.HTTP_404_NOT_FOUND)
+            
+        if format_name is not None:
+            queryset = queryset.filter(format=format_name)
 
         # Filtering private decks
         if not request.user.is_anonymous:
