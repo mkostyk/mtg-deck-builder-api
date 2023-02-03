@@ -33,7 +33,7 @@ class TournamentArchetypeView(APIView):
                               status=status.HTTP_400_BAD_REQUEST)
 
         if archetype_name is not None:
-            queryset = queryset.filter(name=archetype_name)
+            queryset = queryset.filter(name__icontains=archetype_name)
         if archetype_id is not None:
             queryset = queryset.filter(id=archetype_id)
 
