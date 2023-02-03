@@ -90,7 +90,11 @@ class CardsInDeckView(APIView):
                 CardsInDeck.objects.filter(deck=deck).delete()
             else:
                 # Delete a single card from a deck
-                CardsInDeck.objects.get(id=card_id).delete()
+                try:
+                    CardsInDeck.objects.get(id=card_id).delete()
+                except CardsInDeck.DoesNotExist:
+                    return Response({"message" : "Bad request: chosen card does not exist"},
+                                    status=status.HTTP_400_BAD_REQUEST)
 
             deck.last_update = datetime.now()
             deck.save()
