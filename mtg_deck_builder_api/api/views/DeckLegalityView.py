@@ -17,7 +17,7 @@ def check_deck_basic_legality(deck):
     cards = CardsInDeck.objects.all().filter(deck=deck)
     sideboard = Sideboard.objects.all().filter(deck=deck)
 
-    if cards.count() < 60 or sideboard.count() > 15:
+    if cards.count() < 60 or sideboard.count() > 15 or deck.format is None:
         return False
 
     format = deck.format

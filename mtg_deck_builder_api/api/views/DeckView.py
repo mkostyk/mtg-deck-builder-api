@@ -60,7 +60,7 @@ class DeckView(APIView):
                 return Response({"message" : "Not found: user does not exist"},
                                   status=status.HTTP_404_NOT_FOUND)
             
-        if format_name is not None:
+        if format_name is not None and format_name != "":
             format_name = format_name.lower()
             queryset = queryset.filter(format=format_name)
 
