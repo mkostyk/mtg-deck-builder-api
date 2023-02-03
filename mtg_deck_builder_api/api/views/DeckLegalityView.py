@@ -10,7 +10,7 @@ from knox.auth import TokenAuthentication
 from ..models import Deck, CardsInDeck, Legalities, Sideboard
 from ..utils import *
 
-magic_words = "a deck can have any nomber of cards named"
+magic_words = "a deck can have any number of cards named"
 
 # TODO - singleton formats
 def check_deck_basic_legality(deck):
