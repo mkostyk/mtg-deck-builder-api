@@ -43,6 +43,7 @@ class TournamentArchetypeView(APIView):
         
         start = (page - 1) * PAGE_SIZE
         end = page * PAGE_SIZE
+        queryset = queryset.order_by('-popularity')
 
         serializer = TournamentArchetypeSerializer(queryset[start:end], many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
