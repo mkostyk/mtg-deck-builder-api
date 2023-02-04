@@ -12,7 +12,6 @@ from ..utils import *
 
 magic_words = "a deck can have any number of cards named"
 
-# TODO - singleton formats
 def check_deck_basic_legality(deck):
     cards = CardsInDeck.objects.all().filter(deck=deck)
     sideboard = Sideboard.objects.all().filter(deck=deck)

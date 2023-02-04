@@ -6,5 +6,3 @@ class IsStaffOrReadOnly(permissions.BasePermission):
             return True
         else:
             return request.user.is_staff
-
-# TODO - permission class for user to only be able to delete/modify their own decks

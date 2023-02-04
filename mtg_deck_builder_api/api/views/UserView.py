@@ -12,7 +12,6 @@ class UserView(APIView):
 
     @swagger_auto_schema(operation_description="Get user from the database", manual_parameters=[user_id_param], responses=
     {200: "User found", 400: "Bad request: missing query parameters", 404: "Not found: user does not exist"})
-    # TODO - 200 response w dokumentacji.
     def get(self, request):
         user_id = request.query_params.get('user_id')
 

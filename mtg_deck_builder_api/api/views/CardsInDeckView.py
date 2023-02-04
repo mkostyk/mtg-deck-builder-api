@@ -28,7 +28,6 @@ class CardsInDeckView(APIView):
 
         deck_id = request.query_params.get('deck_id')
         
-        # TODO - Django shortcut, error handling
         if deck_id is not None: 
             #Checking if chosen deck is public.
             try:
@@ -65,7 +64,7 @@ class CardsInDeckView(APIView):
                             status=status.HTTP_404_NOT_FOUND)
 
         if card_serializer.is_valid():
-            card_serializer.save(deck=deck, card=card)  # TODO - testing
+            card_serializer.save(deck=deck, card=card)
             deck.last_update = datetime.now()
             deck.save()
             return Response(card_serializer.data, status=status.HTTP_201_CREATED) 

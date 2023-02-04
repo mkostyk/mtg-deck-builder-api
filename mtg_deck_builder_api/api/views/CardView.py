@@ -12,7 +12,6 @@ from ..serializers import CardSerializer, CardResultSerializer
 
 
 class CardView(APIView):
-    # TODO - this should definitely be a body parameter cause it's a lot of data
     id_param = openapi.Parameter('id', openapi.IN_QUERY, description="Card id", type=openapi.TYPE_INTEGER)
     name_param = openapi.Parameter('name', openapi.IN_QUERY, description="Card name", type=openapi.TYPE_STRING)
     exact_name_param = openapi.Parameter('exact_name', openapi.IN_QUERY, description="Card exact name", type=openapi.TYPE_STRING)
@@ -92,7 +91,6 @@ class CardView(APIView):
             queryset = queryset.filter(card_text__icontains=card_text_one_block)
 
         if format_name is not None and format_name != "":
-            # TODO - optymalizacja
             format_name = format_name.lower() # column name - has to be lowercase
             filter_params = {format_name: ['legal', 'restricted']}
             filter = or_filter(filter_params)
@@ -108,7 +106,6 @@ class CardView(APIView):
             return Response({"message" : "Not found: try again with different parameters"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        # TODO - sortowanie po popularności
         start = (page - 1) * PAGE_SIZE
         end = page * PAGE_SIZE
         queryset = queryset.order_by('card_name')
