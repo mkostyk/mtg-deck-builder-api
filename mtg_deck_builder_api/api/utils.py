@@ -27,6 +27,7 @@ def get_page(page):
         page = int(page)
     return page
 
+
 @staticmethod
 def reverse_case_insensitive_contains(queryset, search_field_name: str, search_field_value: str):
     return queryset \
