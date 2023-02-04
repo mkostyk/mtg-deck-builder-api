@@ -135,10 +135,11 @@ class TournamentArchetypeSerializer(serializers.HyperlinkedModelSerializer):
     name = serializers.CharField(max_length = 1000)
     popularity = serializers.DecimalField(max_digits=3, decimal_places=1)
     example_deck_id = serializers.IntegerField()
+    format = serializers.CharField(max_length = 100)
 
     class Meta:
         model = TournamentArchetype
-        fields = ('id', 'name', 'popularity', 'example_deck_id')
+        fields = ('id', 'name', 'popularity', 'example_deck_id', 'format')
 
 
 class CardsInDeckSerializer(serializers.HyperlinkedModelSerializer):
