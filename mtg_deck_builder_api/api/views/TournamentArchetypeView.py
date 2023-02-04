@@ -21,7 +21,7 @@ class TournamentArchetypeView(APIView):
 
     archetype_name_param = openapi.Parameter('archetype', openapi.IN_QUERY, description="Archetype name", type=openapi.TYPE_STRING)
     archetype_id_param = openapi.Parameter('archetype_id', openapi.IN_QUERY, description="Archetype id", type=openapi.TYPE_INTEGER)
-    page_param = openapi.Parameter('page', openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER)
+    page_param = openapi.Parameter('page', openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER, default=1)
 
     @swagger_auto_schema(manual_parameters=[archetype_name_param, archetype_id_param, page_param],
     operation_description="Get tournament archetypes from the database",
@@ -31,10 +31,6 @@ class TournamentArchetypeView(APIView):
         archetype_id = request.query_params.get('archetype_id')
         page = get_page(request.query_params.get('page'))
         queryset = TournamentArchetype.objects.all()
-
-        if archetype_id is None and archetype_name is None:
-            return Response({"message" : "Bad request: missing query parameters"}, 
-                              status=status.HTTP_400_BAD_REQUEST)
 
         if archetype_name is not None:
             queryset = queryset.filter(name__icontains=archetype_name)
