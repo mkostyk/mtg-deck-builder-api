@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.db.models import UniqueConstraint
 
 class Card(models.Model):
-    second_side = models.IntegerField(null=True) # TODO - foreign key to self
+    second_side = models.IntegerField(null=True)
     scryfall_id = models.CharField(max_length = 40, null=True, blank=True)
     card_name = models.TextField(null=True, blank=True)
     keywords = models.TextField(null=True, blank=True)
@@ -88,7 +88,7 @@ class DeckTag(models.Model):
 
     class Meta:
         constraints = [
-            UniqueConstraint(fields=['deck', 'tag'], name='unique_tag') # TODO - lowercase/uppercase traktować tak samo?
+            UniqueConstraint(fields=['deck', 'tag'], name='unique_tag')
         ]
 
 

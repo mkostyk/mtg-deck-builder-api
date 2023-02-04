@@ -118,7 +118,7 @@ class DeckView(APIView):
     @swagger_auto_schema(manual_parameters=[id_param], operation_description="Delete a deck",
     responses={200: "OK", 400: "Bad request: missing query parameters", 404: "Not found: chosen deck does not exist or you are not its author"})
     def delete(self, request):
-        deck_id = request.query_params.get('id') # TODO - (name, user_id) jako unique key
+        deck_id = request.query_params.get('id')
 
         if deck_id is None:
             return Response({"message" : "Bad request: missing query parameters"}, 
@@ -133,7 +133,6 @@ class DeckView(APIView):
 
         deck.delete()
 
-        # TODO - error handling
         return Response({}, status=status.HTTP_200_OK)
 
 def as_view():

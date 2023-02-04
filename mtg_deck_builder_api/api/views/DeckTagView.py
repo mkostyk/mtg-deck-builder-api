@@ -41,7 +41,7 @@ class DeckTagView(APIView):
                 if (result_tag.deck.author != request.user) and result_tag.deck.private:
                     tags = tags.exclude(deck=result_tag.deck)
         else:
-            return Response({"message" : "Bad request: missing query parameters"}, status=status.HTTP_400_BAD_REQUEST) # TODO
+            return Response({"message" : "Bad request: missing query parameters"}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = DeckTagSerializer(tags, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -62,7 +62,7 @@ class DeckTagView(APIView):
                             status=status.HTTP_404_NOT_FOUND)
 
         if tag_serializer.is_valid():
-            tag_serializer.save(deck=deck, tag=tag) # TODO - chyba można bez argumentów?
+            tag_serializer.save(deck=deck, tag=tag)
             return Response(tag_serializer.data, status=status.HTTP_201_CREATED) 
 
         return Response(tag_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
