@@ -30,7 +30,7 @@ class PricesView(APIView):
         if card_id is not None:
             queryset = queryset.filter(card_id=card_id)
         if less_than is not None:
-            queryset = queryset.filter(usd__lte=less_than) # TODO - other currencies
+            queryset = queryset.filter(usd__lte=less_than)
         if more_than is not None:
             queryset = queryset.filter(usd__gte=more_than)
 
@@ -38,7 +38,7 @@ class PricesView(APIView):
             return Response({"message" : "Not found: try again with different parameters"},
                             status=status.HTTP_404_NOT_FOUND)
             
-        serializer = PricesSerializer(queryset[:PAGE_SIZE], many=True) # TODO - pagination
+        serializer = PricesSerializer(queryset[:PAGE_SIZE], many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 def as_view():
